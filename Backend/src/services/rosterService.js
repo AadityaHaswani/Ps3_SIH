@@ -339,6 +339,10 @@ async function commitRosterVersion(uploadId, user) {
   const { syncRosterCommitToLedger } = require('./seatLedgerService');
   await syncRosterCommitToLedger(committedVersion, user);
 
+  // Mark Scorecard snapshots stale for this institution and academic year (Feature 4)
+  const scorecardService = require('./scorecardService');
+  scorecardService.markSnapshotsStale(upload.institutionId, upload.academicYear, 'ROSTER_COMMITTED').catch(() => {});
+
   return committedVersion;
 }
 

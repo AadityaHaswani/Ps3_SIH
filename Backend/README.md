@@ -227,9 +227,106 @@ Provides illustrative sensitivity bounds for unconfirmed records:
 | `GET` | `/api/v1/sampling-runs` | All Authenticated Roles (Scoped) | Query paginated list of sampling runs |
 | `GET` | `/api/v1/sampling-runs/:id` | All Authenticated Roles (Scoped) | Retrieve run metadata, progress counts, and execution parameters |
 | `GET` | `/api/v1/sampling-runs/:id/items` | All Authenticated Roles (Scoped) | Retrieve paginated sampling items with masked student identifiers |
-| `PATCH` | `/api/v1/sampling-items/:id/result` | Review Roles (Authority, Auditor) | Record item verification outcome (`VERIFIED`, `FAILED_CHECK`, `UNCONFIRMED`, `EXCLUDED`) |
+| `PATCH` | `/api/v1/sampling-items/:id/result` | Authority Roles (Admin, Officer) | Record item verification outcome (`VERIFIED`, `FAILED_CHECK`, `UNCONFIRMED`, `EXCLUDED`). Auditor is read-only. |
 | `POST` | `/api/v1/sampling-runs/:id/close` | Authority Admin Roles | Formally close a sampling run and freeze item reviews |
 | `GET` | `/api/v1/sampling-runs/:id/estimate` | All Authenticated Roles (Scoped) | Compute Wilson score confidence interval on random stratum |
+
+### Feature 4: Institutional Data Reliability Scorecard
+| Method | Endpoint | Allowed Roles | Description |
+|---|---|---|---|
+| `GET` | `/api/v1/scorecards/institutions/:institutionId` | Scoped Institution, Authority, Auditor | Retrieve latest scorecard snapshot (evaluates/snapshots if stale) |
+| `GET` | `/api/v1/scorecards/institutions/:institutionId/metrics` | Scoped Institution, Authority, Auditor | Retrieve detailed breakdown of M1, M2, M3, M4 metrics & coverage |
+| `GET` | `/api/v1/scorecards/institutions/:institutionId/trend` | Scoped Institution, Authority, Auditor | Retrieve historical score & metric time series with formula version markers |
+| `GET` | `/api/v1/scorecards/institutions/:institutionId/history` | Scoped Institution, Authority, Auditor | Query paginated historical snapshots for compliance auditing |
+| `POST` | `/api/v1/scorecards/recalculate` | Scoped Institution (own), Authority, Admin | On-demand scorecard recalculation, generating fresh immutable snapshot |
+| `GET` | `/api/v1/scorecards/compare` | All Authenticated (Peer-Anonymised for Institution) | Side-by-side comparison across institutions with comparability warnings |
+| `GET` | `/api/v1/scorecards/config` | All Authenticated Roles | View active or specific version of scoring configuration |
+| `POST` | `/api/v1/scorecards/config` | Authority Admin, Platform Admin | Create a new versioned scoring configuration (formula update) |
+
+---
+
+## Feature 4: Institutional Data Reliability Scorecard Architecture
+
+### Mandatory Non-Negotiable Principle & Disclaimer
+"The Institutional Data Reliability Scorecard measures the reliability and completeness of reported data and helps identify support needs. It is not a misconduct verdict or a measure of overall institutional quality."
+
+Strict non-punitive framing is maintained across all APIs, models, and UI contracts. Defamatory terms such as "fraudulent", "dishonest", "bad institution", or "low-quality college" are strictly prohibited.
+
+### Metric Families
+1. **M1 — Record Completeness:**
+   - Formula: `completenessPct = 100 × populatedRequiredFields / totalRequiredFields`
+   - Configurable mandatory fields: `applicationNo`, `apaarToken`, `name`, `dob`, `gender`, `category`, `programmeCode`, `academicYear`.
+   - Legitimately optional fields (e.g. `admissionDate`, `admissionQuota`) do not contribute to the denominator.
+   - Requires minimum 30 records; returns `INSUFFICIENT_DATA` if below threshold.
+2. **M2 — Unresolved Discrepancies:**
+   - Observed rate per 1,000 records from Feature 1 reconciliation findings: `observedRatePer1000 = (openCount / inScopeRecords) × 1000`.
+   - Sub-Score Formula: `discrepancySubScore = 100 × max(0, 1 - observedRatePer1000 / configuredRateCeiling)` (default ceiling: 50.0).
+   - Findings classified by severity and ageing buckets: `0-7 days`, `8-30 days`, `31+ days`.
+   - `SOURCE_UNAVAILABLE` findings are strictly excluded from discrepancies and tracked under independent Data Coverage.
+3. **M3 — Update Timeliness:**
+   - Evaluates lag between effective event dates (`admissionDate`) and submission/commit timestamps.
+   - Metrics: Median lag (days), P90 lag (days), on-time percentage (`delay <= 15 days`), data freshness.
+   - Normalisation: `lagScore = 100 × max(0, 1 - p90LagDays / configuredLagCeilingDays)`, `timelinessSubScore = 0.5 × onTimePct + 0.5 × lagScore`.
+   - Minimum 20 dated events required; marked `UNAVAILABLE` or `INSUFFICIENT_DATA` if event dates are unpopulated.
+4. **M4 — Correction Activity & Trends:**
+   - Tracks attributable correction events (`DataCorrectionEvent`) and Seat Ledger reversals.
+   - Metrics: Total corrections, corrections per 100 records, repeat-correction rate, turnaround days, self-initiated vs prompted counts.
+   - Non-Punitive Safeguard: `enabledInScore: false` (weight 0.00) by default so proactive self-corrections are never penalized.
+
+### Scoring Formula, Renormalisation & Minimum Safeguards
+- **Prototype Weights:** M1 Completeness (0.40), M2 Discrepancies (0.30), M3 Timeliness (0.30), M4 Corrections (0.00).
+- **Renormalisation:** Weights are dynamically renormalised across available scored metrics: `weightUsed = configuredWeight / sum(availableWeights)`.
+- **Minimum Thresholds:** Requires at least 50 in-scope records and at least 2 scored metrics (M1-M3).
+- **Insufficient Data Protection:** If thresholds are not met, returns `band: INSUFFICIENT_DATA`, `overallScore: null`, `isEligibleForScore: false`. A score of 0 is **never** assigned for insufficient data.
+- **Support-Oriented Bands:**
+  - `STRONG` (Score >= 85.0)
+  - `ADEQUATE` (70.0 <= Score < 85.0)
+  - `NEEDS_SUPPORT` (50.0 <= Score < 70.0)
+  - `PRIORITY_SUPPORT` (Score < 50.0)
+  - `INSUFFICIENT_DATA` (Ineligible)
+
+### Data Coverage
+Reported independently from the scorecard value. Evaluates availability and mode (`INSTITUTION_REPORTED`, `SIMULATED`) across `INSTITUTION_ROSTER`, `NATIONAL_APAAR_REGISTRY`, and `BOARD_RESULTS_REGISTER`.
+
+---
+
+## Frontend Integration Contract
+
+### Section Layout & Expected Actions
+1. **Overview Tab:**
+   - Displays Institution Identity, Reporting Period, Overall Score card, Support Band badge (`STRONG`, `ADEQUATE`, `NEEDS_SUPPORT`, `PRIORITY_SUPPORT`, `INSUFFICIENT_DATA`), Coverage Progress Bar, Unresolved Discrepancies count, Formula Version, and Verbatim Disclaimer.
+   - Primary Action: `Recalculate Score` button (triggers `POST /api/v1/scorecards/recalculate`).
+2. **Metrics Tab:**
+   - 4 Interactive Metric Cards (M1, M2, M3, M4) displaying raw metrics, denominators, sub-scores, weights, and status badges.
+   - Action: Click-through drill-down links to view underlying roster rows or open reconciliation findings.
+3. **Compare Tab:**
+   - Institution Selector Subject to RBAC. Displays side-by-side metric comparison, record counts, and coverage.
+   - Comparability Warnings Callout: Warns when comparing different institution types (`ENGINEERING` vs `MANAGEMENT`) or formula versions.
+   - Privacy Guard: For institution callers, peer institution names are automatically masked as `Peer Institution B (College)`.
+4. **Trends Tab:**
+   - Historical time series charts showing score trajectory, metric evolutions, coverage, and formula version change markers.
+5. **Drill-down Tab:**
+   - Paginated table of in-scope roster rows and reconciliation findings with masked identifiers (`maskIdentifier`, `maskName`).
+6. **Method Tab:**
+   - Comprehensive explanation of metric definitions, mathematical formulas, prototype weights, normalisation ceilings, and prototype assumptions.
+7. **Support Suggestions Tab:**
+   - Actionable recommendation cards citing specific triggering metrics, values, and target workflows (e.g. "Targeted Data-Entry Refresher for APAAR / Student ID", "Priority Case Review for Ageing Findings").
+
+---
+
+## Recharts Graph & Chart Specifications
+
+| # | Chart Name | Business Question | Recharts Component | Data Fields & Payload Structure | API Endpoint & Filters | Tooltip & Interaction Behaviour | Empty / Unavailable State Handling |
+|---|---|---|---|---|---|---|---|
+| **1** | **Overall Reliability Score Trend** | How has the institution's data reliability evolved over time? | `<LineChart>` / `<ResponsiveContainer>` | `calculatedAt` (X-axis), `overallScore` (Y-axis 0-100), `formulaChanged` (ReferenceLine), `isStale` | `GET /api/v1/scorecards/institutions/:id/trend` | Shows Date, Score, Band, Formula Version. Flags formula change markers. | Displays message: "Insufficient historical snapshots. Recalculate to establish baseline." |
+| **2** | **Metric Sub-Score Evolution** | Which metric dimension (Completeness, Discrepancies, Timeliness) is improving or needs attention? | `<LineChart>` with multi-lines | `reportingPeriod` (X-axis), `completenessPct`, `unresolvedRatePer1000`, `onTimePct` | `GET /api/v1/scorecards/institutions/:id/trend` | Multi-line hover displaying individual metric sub-scores and weights. | Dashed line for periods where a metric was `UNAVAILABLE`. |
+| **3** | **Side-by-Side Peer Comparison** | How does this institution's data profile compare with peers of the same type? | `<BarChart>` (grouped) | `institutionName` (X-axis), `m1SubScore`, `m2SubScore`, `m3SubScore`, `overallScore` | `GET /api/v1/scorecards/compare?institutions=id1,id2` | Shows institution name (or masked peer name), sub-score breakdown, comparability warnings. | Renders disabled state with warning banner if institution types mismatch. |
+| **4** | **Data Completeness by Field** | Which specific student data fields have the highest frequency of missing values? | `<BarChart>` (horizontal layout) | `fieldName` (Y-axis), `missingCount` (X-axis), `populatedCount` | `GET /api/v1/scorecards/institutions/:id/metrics` | Shows Field Name, Populated Count, Missing Count, Missing %. Clicking field opens filtered roster drill-down. | Shows "100% Complete — Zero missing required field instances". |
+| **5** | **Open Discrepancy Ageing Distribution** | Are reconciliation findings being cleared promptly or lingering beyond 30 days? | `<BarChart>` / `<PieChart>` | `bucket` (`0-7 days`, `8-30 days`, `31+ days`), `count` | `GET /api/v1/scorecards/institutions/:id/metrics` | Shows Age Bucket, Open Finding Count, Severity breakdown (`CRITICAL`, `WARNING`). | Shows "Zero open discrepancies in current reporting period". |
+| **6** | **Admissions Reporting Timeliness (On-Time vs Late)** | Are student admissions being reported within the configured 15-day window? | `<PieChart>` / `<Donut>` | `category` (`On-Time (<=15d)`, `Late (>15d)`), `count`, `pct` | `GET /api/v1/scorecards/institutions/:id/metrics` | Shows category, student count, percentage, median lag days (e.g. "Median Lag: 5 days"). | Shows "Timeliness metrics unavailable: Effective admission dates are unpopulated". |
+| **7** | **Data Coverage vs Unresolved Records** | What proportion of external source registers are available versus open discrepancies? | `<ComposedChart>` (Bar + Line) | `source` (X-axis), `coveragePct` (Bar), `unresolvedCount` (Line) | `GET /api/v1/scorecards/institutions/:id` | Shows source name, mode (`INSTITUTION_REPORTED`, `SIMULATED`), and availability status. | Clearly indicates `SIMULATED` or `OUTAGE` state for external registers. |
+| **8** | **Correction Activity & Turnaround Trend** | Is the institution actively self-correcting data, and what is the turnaround time? | `<AreaChart>` | `month` (X-axis), `totalCorrections`, `selfInitiatedCount`, `medianTurnaroundDays` | `GET /api/v1/scorecards/institutions/:id/trend` | Shows correction volume, self-initiated vs prompted split, median turnaround hours. | Shows contextual message: "No attributable corrections logged. Corrections are not penalised in score." |
+| **9** | **Formula Version Markers in Historical Trends** | When did regulatory formula changes occur in relation to historical evaluations? | `<LineChart>` with vertical `<ReferenceLine>` | `calculatedAt` (X-axis), `overallScore`, `configVersion` | `GET /api/v1/scorecards/institutions/:id/trend` | Hovering over vertical reference line displays formula version details and weight revisions. | Single version timeline rendered without vertical divider lines. |
 
 ---
 
@@ -259,3 +356,4 @@ Run test suite with code coverage:
 ```powershell
 npm.cmd run test:coverage
 ```
+

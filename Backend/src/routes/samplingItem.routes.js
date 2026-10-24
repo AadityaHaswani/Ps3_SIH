@@ -17,8 +17,7 @@ router.use(authenticate);
 const REVIEW_ROLES = [
   ROLES.PLATFORM_ADMIN,
   ROLES.AUTHORITY_ADMIN,
-  ROLES.AUTHORITY_OFFICER,
-  ROLES.AUDITOR
+  ROLES.AUTHORITY_OFFICER
 ];
 
 // Record verification review outcome (Institution roles explicitly prohibited)

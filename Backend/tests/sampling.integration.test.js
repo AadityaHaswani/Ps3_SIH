@@ -306,6 +306,20 @@ describe('Feature 3: Assurance Sampling Integration Suite', () => {
       expect(res.body.error.code).toBe('FORBIDDEN');
     });
 
+    test('auditor role is read-only and cannot record verification outcome (403 Forbidden)', async () => {
+      const res = await request(app)
+        .patch(`/api/v1/sampling-items/${testItemId}/result`)
+        .set('x-user-role', 'AUDITOR')
+        .send({
+          verificationStatus: 'VERIFIED',
+          verificationMethod: 'DOCUMENT_INSPECTION'
+        });
+
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('FORBIDDEN');
+    });
+
     test('authority reviewer records VERIFIED outcome with evidence reference', async () => {
       const res = await request(app)
         .patch(`/api/v1/sampling-items/${testItemId}/result`)

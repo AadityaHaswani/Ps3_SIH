@@ -10,6 +10,7 @@ const findingRoutes = require('./finding.routes');
 const seatLedgerRoutes = require('./seatLedger.routes');
 const samplingRunRoutes = require('./samplingRun.routes');
 const samplingItemRoutes = require('./samplingItem.routes');
+const scorecardRoutes = require('./scorecard.routes');
 
 const router = express.Router();
 
@@ -22,5 +23,6 @@ router.use('/findings', findingRoutes);
 router.use('/seat-ledger', seatLedgerRoutes);
 router.use('/sampling-runs', samplingRunRoutes);
 router.use('/sampling-items', samplingItemRoutes);
+router.use('/scorecards', scorecardRoutes);
 
 module.exports = router;

@@ -36,6 +36,14 @@ async function reviewFinding(req, res, next) {
 
     const updatedFinding = await recordFindingReview(id, { action, reason, note }, req.user);
 
+    // Mark scorecard snapshots stale for the affected institution
+    if (updatedFinding && updatedFinding.institutionId) {
+      try {
+        const scorecardService = require('../services/scorecardService');
+        scorecardService.markSnapshotsStale(updatedFinding.institutionId, null, 'FINDING_REVIEWED').catch(() => {});
+      } catch (_) {}
+    }
+
     return sendSuccess(res, updatedFinding, 200);
   } catch (err) {
     if (err.message.includes('not found')) {
