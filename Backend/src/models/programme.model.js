@@ -23,12 +23,23 @@ const intakeRecordSchema = new mongoose.Schema(
     },
     label: {
       type: String,
-      enum: ['AICTE_APPROVED', 'STATE_APPROVED', 'INSTITUTION_DECLARED', 'PROVISIONAL'],
-      default: 'AICTE_APPROVED'
+      enum: [
+        'AICTE_APPROVED',
+        'STATE_APPROVED',
+        'INSTITUTION_DECLARED',
+        'DOCUMENT_SUPPORTED',
+        'CROSS_REGISTER_CONFIRMED',
+        'AUTHORITY_VERIFIED',
+        'AUTHORITY_VERIFIED_SIMULATED',
+        'VERIFICATION_PENDING',
+        'UNABLE_TO_VERIFY',
+        'PROVISIONAL'
+      ],
+      default: 'INSTITUTION_DECLARED'
     },
     sourceMode: {
       type: String,
-      enum: ['LIVE', 'SIMULATED', 'DECLARED'],
+      enum: ['LIVE', 'SIMULATED', 'DECLARED', 'INSTITUTION_DECLARED'],
       default: 'SIMULATED'
     },
     sourceRef: {

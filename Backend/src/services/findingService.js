@@ -82,6 +82,21 @@ async function reviewFinding(id, { action, reason, note }, user = {}) {
   });
 
   await finding.save();
+
+  // Mark affected scorecard snapshots stale
+  try {
+    const ReconciliationRun = require('../models/reconciliationRun.model');
+    const scorecardService = require('./scorecardService');
+    const run = await ReconciliationRun.findById(finding.runId).lean();
+    if (run && run.academicYear && finding.institutionId) {
+      await scorecardService.markSnapshotsStale(
+        finding.institutionId,
+        run.academicYear,
+        'RECONCILIATION_FINDING_REVIEWED'
+      );
+    }
+  } catch (_) {}
+
   return finding;
 }
 

@@ -182,9 +182,25 @@ const scoreSnapshotSchema = new mongoose.Schema(
       default: false,
       index: true
     },
+    freshness: {
+      type: String,
+      enum: ['FRESH', 'STALE', 'UNKNOWN'],
+      default: 'FRESH',
+      index: true
+    },
     staleReason: {
       type: String,
       default: null
+    },
+    staleSinceVersionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'RosterVersion',
+      default: null
+    },
+    revalidationStatus: {
+      type: String,
+      enum: ['NOT_STARTED', 'QUEUED', 'REVALIDATING', 'REVALIDATED', 'NOT_APPLICABLE', 'BLOCKED'],
+      default: 'NOT_STARTED'
     },
     supportSuggestions: [
       {

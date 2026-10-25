@@ -113,6 +113,26 @@ const samplingRunSchema = new mongoose.Schema(
       email: { type: String, default: null },
       closedAt: { type: Date, default: null },
       reason: { type: String, default: null }
+    },
+    freshness: {
+      type: String,
+      enum: ['FRESH', 'STALE', 'UNKNOWN'],
+      default: 'FRESH',
+      index: true
+    },
+    staleReason: {
+      type: String,
+      default: null
+    },
+    staleSinceVersionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'RosterVersion',
+      default: null
+    },
+    revalidationStatus: {
+      type: String,
+      enum: ['NOT_STARTED', 'QUEUED', 'REVALIDATING', 'REVALIDATED', 'NOT_APPLICABLE', 'BLOCKED'],
+      default: 'BLOCKED' // Closed historical sampling runs cannot be re-sampled retrospectively
     }
   },
   {

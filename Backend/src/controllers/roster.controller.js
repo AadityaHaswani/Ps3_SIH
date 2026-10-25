@@ -82,7 +82,13 @@ async function getPreview(req, res, next) {
 async function commitRoster(req, res, next) {
   try {
     const { id } = req.params;
-    const version = await commitRosterVersion(id, req.user);
+    const idempotencyKey =
+      req.headers['idempotency-key'] ||
+      req.headers['x-idempotency-key'] ||
+      (req.body && req.body.idempotencyKey) ||
+      null;
+
+    const version = await commitRosterVersion(id, req.user, idempotencyKey);
 
     return sendSuccess(
       res,

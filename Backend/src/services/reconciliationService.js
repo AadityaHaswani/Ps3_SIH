@@ -524,6 +524,16 @@ async function runReconciliation({
     idempotencyKey
   });
 
+  // Mark scorecard snapshots stale for affected institution and academic year
+  try {
+    const scorecardService = require('./scorecardService');
+    await scorecardService.markSnapshotsStale(
+      institutionId,
+      academicYear,
+      'RECONCILIATION_RUN_COMPLETED'
+    );
+  } catch (_) {}
+
   return { run: runDoc, isReplay: false };
 }
 

@@ -320,7 +320,18 @@ async function calculateTimeliness(institutionId, reportingPeriod, config, optio
   // Fetch in-scope roster rows
   const rows = await getInScopeRosterRows(institutionId, reportingPeriod, options);
 
-  if (!rows || rows.length === 0) {
+  // Fetch lifecycle events for institution and reporting period
+  let lifecycleEvents = [];
+  try {
+    const StudentLifecycleEvent = require('../../models/lifecycleEvent.model');
+    lifecycleEvents = await StudentLifecycleEvent.find({
+      institutionId,
+      academicYear: reportingPeriod,
+      status: 'VALID'
+    }).lean();
+  } catch (_) {}
+
+  if ((!rows || rows.length === 0) && lifecycleEvents.length === 0) {
     return {
       status: 'UNAVAILABLE',
       medianLagDays: null,
@@ -331,7 +342,7 @@ async function calculateTimeliness(institutionId, reportingPeriod, config, optio
       excludedEventCount: 0,
       dataFreshnessDays: null,
       lastUpdatedTimestamp: null,
-      missingReason: 'No roster records found for timeliness calculation.'
+      missingReason: 'No roster or lifecycle records found for timeliness calculation.'
     };
   }
 
@@ -341,39 +352,79 @@ async function calculateTimeliness(institutionId, reportingPeriod, config, optio
     academicYear: reportingPeriod
   }).sort({ createdAt: -1 });
 
-  const lastUpdatedTimestamp = latestUpload ? latestUpload.createdAt : rows[0].createdAt;
+  let lastUpdatedTimestamp = latestUpload
+    ? latestUpload.createdAt
+    : (rows && rows.length > 0 ? rows[0].createdAt : null);
+
   const now = options.asOfDate ? new Date(options.asOfDate) : new Date();
-  const dataFreshnessDays = lastUpdatedTimestamp
-    ? Math.max(0, Math.floor((now - new Date(lastUpdatedTimestamp)) / (1000 * 60 * 60 * 24)))
-    : null;
 
   // Filter rows with valid, parseable admissionDate
   const lags = [];
   let onTimeCount = 0;
   let excludedCount = 0;
 
-  for (const r of rows) {
-    if (!r.admissionDate) {
-      excludedCount += 1;
-      continue;
-    }
+  if (rows && rows.length > 0) {
+    for (const r of rows) {
+      if (!r.admissionDate) {
+        excludedCount += 1;
+        continue;
+      }
 
-    const admDate = new Date(r.admissionDate);
-    if (isNaN(admDate.getTime())) {
-      excludedCount += 1;
-      continue;
-    }
+      const admDate = new Date(r.admissionDate);
+      if (isNaN(admDate.getTime())) {
+        excludedCount += 1;
+        continue;
+      }
 
-    // Delay = reported date (createdAt or upload date) - effective admissionDate
-    const reportedDate = r.createdAt ? new Date(r.createdAt) : now;
-    const diffMs = reportedDate - admDate;
-    const lagDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+      // Delay = reported date (createdAt or upload date) - effective admissionDate
+      const reportedDate = r.createdAt ? new Date(r.createdAt) : now;
+      const diffMs = reportedDate - admDate;
+      const lagDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
 
-    lags.push(lagDays);
-    if (lagDays <= onTimeWindowDays) {
-      onTimeCount += 1;
+      lags.push(lagDays);
+      if (lagDays <= onTimeWindowDays) {
+        onTimeCount += 1;
+      }
     }
   }
+
+  // Incorporate valid lifecycle events
+  if (lifecycleEvents && lifecycleEvents.length > 0) {
+    for (const ev of lifecycleEvents) {
+      if (!ev.effectiveDate) {
+        excludedCount += 1;
+        continue;
+      }
+
+      const effDate = new Date(ev.effectiveDate);
+      if (isNaN(effDate.getTime())) {
+        excludedCount += 1;
+        continue;
+      }
+
+      const repDate = ev.reportedAt ? new Date(ev.reportedAt) : (ev.createdAt ? new Date(ev.createdAt) : now);
+      if (isNaN(repDate.getTime())) {
+        excludedCount += 1;
+        continue;
+      }
+
+      const diffMs = repDate - effDate;
+      const lagDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+
+      lags.push(lagDays);
+      if (lagDays <= onTimeWindowDays) {
+        onTimeCount += 1;
+      }
+
+      if (!lastUpdatedTimestamp || repDate > new Date(lastUpdatedTimestamp)) {
+        lastUpdatedTimestamp = repDate;
+      }
+    }
+  }
+
+  const dataFreshnessDays = lastUpdatedTimestamp
+    ? Math.max(0, Math.floor((now - new Date(lastUpdatedTimestamp)) / (1000 * 60 * 60 * 24)))
+    : null;
 
   const eligibleCount = lags.length;
 

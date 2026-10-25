@@ -47,7 +47,7 @@ router.post(
 // Create / execute Assurance Sampling run
 router.post(
   '/',
-  authorize(REVIEW_ROLES),
+  authorize(AUTHORITY_ADMIN_ROLES),
   scopeToInstitution,
   createRun
 );

@@ -280,13 +280,19 @@ async function getRosterPreview(uploadId, { page = 1, limit = 25 }) {
 /**
  * Commits a validated roster into an immutable RosterVersion
  */
-async function commitRosterVersion(uploadId, user) {
+async function commitRosterVersion(uploadId, user, idempotencyKey = null) {
   const upload = await RosterUpload.findById(uploadId);
   if (!upload) {
     throw new Error('Roster upload not found.');
   }
 
   if (upload.status === 'COMMITTED') {
+    if (idempotencyKey && upload.committedVersionId) {
+      const existingVersion = await RosterVersion.findById(upload.committedVersionId);
+      if (existingVersion) {
+        return existingVersion;
+      }
+    }
     throw new Error('This roster upload has already been committed.');
   }
 
@@ -335,11 +341,27 @@ async function commitRosterVersion(uploadId, user) {
   upload.committedVersionId = committedVersion._id;
   await upload.save();
 
-  // Synchronize committed roster snapshot with Seat Ledger (Feature 2)
+  // 1. Synchronize committed roster snapshot with Seat Ledger (Feature 2)
   const { syncRosterCommitToLedger } = require('./seatLedgerService');
   await syncRosterCommitToLedger(committedVersion, user);
 
-  // Mark Scorecard snapshots stale for this institution and academic year (Feature 4)
+  // 2. Cryptographically seal committed roster version (Feature 7A & 7E)
+  const sealService = require('./sealService');
+  const seal = await sealService.sealRosterVersion(committedVersion, user);
+
+  // 3. Anchor seal with central authority Ed25519 signature & hash chain (Feature 7F)
+  const anchorService = require('./anchorService');
+  await anchorService.anchorSeal(seal, committedVersion, user);
+
+  // 4. Calculate change blast-radius & mark derived outputs stale (Feature 7C & 7D)
+  const impactService = require('./impactService');
+  await impactService.calculateAndRecordImpact({
+    newVersion: committedVersion,
+    previousVersion: latestVersion,
+    user
+  });
+
+  // 5. Mark Scorecard snapshots stale for this institution and academic year (Feature 4)
   const scorecardService = require('./scorecardService');
   scorecardService.markSnapshotsStale(upload.institutionId, upload.academicYear, 'ROSTER_COMMITTED').catch(() => {});
 

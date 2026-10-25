@@ -43,13 +43,26 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'Idempotency-Key']
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Request-Id',
+    'Idempotency-Key',
+    'X-Refresh-Token',
+    'X-User-Role',
+    'X-User-Id',
+    'X-User-Email',
+    'X-User-Institution',
+    'X-User-Assigned-Institutions'
+  ]
 };
 app.use(cors(corsOptions));
 
-// 4. Body Parsers with safe size limits
+// 4. Body & Cookie Parsers with safe size limits
+const cookieMiddleware = require('./middleware/cookieMiddleware');
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+app.use(cookieMiddleware);
 
 // 5. Baseline Rate Limiter (Skipped in test environment)
 const apiLimiter = rateLimit({

@@ -39,6 +39,12 @@ router.get('/compare', compareInstitutions);
 // 3. Recalculation (Institution users can only recalculate own institution; Authority can recalculate any)
 router.post(
   '/recalculate',
+  authorize([
+    ROLES.PLATFORM_ADMIN,
+    ROLES.AUTHORITY_ADMIN,
+    ROLES.AUTHORITY_OFFICER,
+    ROLES.INSTITUTION_ADMIN
+  ]),
   scopeToInstitution,
   recalculateScore
 );

@@ -89,6 +89,12 @@ router.post(
   scopeToInstitution,
   declareIntake
 );
+router.post(
+  '/intake/declare',
+  authorize(DECLARATION_ROLES),
+  scopeToInstitution,
+  declareIntake
+);
 
 // Authority approved intake configuration (Institution users explicitly excluded)
 router.put(

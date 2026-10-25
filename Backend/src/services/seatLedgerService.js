@@ -393,6 +393,7 @@ async function recordIntakeDeclaration({
   bucket.approvedIntake = intake;
   bucket.intakeSourceMode = 'INSTITUTION_DECLARED';
   bucket.intakeVerificationStatus = 'INTAKE_UNVERIFIED';
+  bucket.isSimulated = false;
   bucket.headroom = metrics.headroom;
   bucket.utilisationPct = metrics.utilisationPct;
   bucket.status = metrics.status;
@@ -404,6 +405,21 @@ async function recordIntakeDeclaration({
     email: user.email || 'admin@institution.edu'
   };
   await bucket.save();
+
+  // Invalidate any prior verifications when new intake capacity is declared
+  try {
+    const { invalidateVerification } = require('./verificationService');
+    await invalidateVerification({
+      subjectType: 'PROGRAMME_INTAKE',
+      subjectId: bucket.bucketKey,
+      fieldPath: 'approvedIntake',
+      newValue: intake,
+      reason: 'Institution declared new intake; previous verifications superseded.',
+      user
+    });
+  } catch (err) {
+    // Non-blocking for ledger transaction
+  }
 
   await SeatBalanceSnapshot.create({
     bucketKey: bucket.bucketKey,
@@ -543,6 +559,7 @@ async function setApprovedIntake({
   bucket.approvedIntake = intake;
   bucket.intakeSourceMode = sourceMode;
   bucket.intakeVerificationStatus = effectiveVerificationStatus;
+  bucket.isSimulated = sourceMode === 'SIMULATED';
   bucket.intakeSourceRef = sourceRef;
   bucket.verificationMethod = verificationMethod;
   bucket.verificationEvidenceRef = verificationEvidenceRef;
@@ -561,6 +578,23 @@ async function setApprovedIntake({
     email: user.email || 'admin@aicte.gov.in'
   };
   await bucket.save();
+
+  // If approved intake changed from previous value, invalidate prior verifications
+  if (prevIntake !== intake) {
+    try {
+      const { invalidateVerification } = require('./verificationService');
+      await invalidateVerification({
+        subjectType: 'PROGRAMME_INTAKE',
+        subjectId: bucket.bucketKey,
+        fieldPath: 'approvedIntake',
+        newValue: intake,
+        reason: 'Authority revised approved intake; previous verifications superseded.',
+        user
+      });
+    } catch (err) {
+      // Non-blocking
+    }
+  }
 
   // Also synchronize embedded Programme.intakeByYear
   const prog = await Programme.findOne({

@@ -61,11 +61,19 @@ const seatBalanceSchema = new mongoose.Schema(
       enum: [
         'NO_INTAKE_CONFIGURED',
         'INTAKE_UNVERIFIED',
+        'INSTITUTION_DECLARED',
         'DOCUMENT_SUPPORTED',
         'CROSS_REGISTER_CONFIRMED',
-        'AUTHORITY_VERIFIED'
+        'AUTHORITY_VERIFIED',
+        'AUTHORITY_VERIFIED_SIMULATED',
+        'VERIFICATION_PENDING',
+        'UNABLE_TO_VERIFY'
       ],
       default: 'NO_INTAKE_CONFIGURED'
+    },
+    isSimulated: {
+      type: Boolean,
+      default: false
     },
     intakeSourceRef: {
       type: String,
@@ -137,6 +145,21 @@ const seatBalanceSchema = new mongoose.Schema(
       default: Date.now
     },
     lastRosterVersionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'RosterVersion',
+      default: null
+    },
+    freshness: {
+      type: String,
+      enum: ['FRESH', 'STALE', 'UNKNOWN'],
+      default: 'FRESH',
+      index: true
+    },
+    staleReason: {
+      type: String,
+      default: null
+    },
+    staleSinceVersionId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'RosterVersion',
       default: null
