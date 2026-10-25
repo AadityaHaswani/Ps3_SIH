@@ -6,24 +6,18 @@ const express = require('express');
 const { recordResult } = require('../controllers/sampling.controller');
 const {
   authenticate,
-  authorize,
-  ROLES
+  authorize
 } = require('../middleware/auth');
+const { PERMISSIONS } = require('../config/permissions');
 
 const router = express.Router();
 
 router.use(authenticate);
 
-const REVIEW_ROLES = [
-  ROLES.PLATFORM_ADMIN,
-  ROLES.AUTHORITY_ADMIN,
-  ROLES.AUTHORITY_OFFICER
-];
-
-// Record verification review outcome (Institution roles explicitly prohibited)
+// Record verification review outcome (Authority Reviewers only; Institution roles & Auditor strictly prohibited)
 router.patch(
   '/:id/result',
-  authorize(REVIEW_ROLES),
+  authorize([PERMISSIONS.SAMPLING_REVIEW]),
   recordResult
 );
 

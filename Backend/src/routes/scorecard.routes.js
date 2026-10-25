@@ -17,9 +17,9 @@ const {
 const {
   authenticate,
   authorize,
-  scopeToInstitution,
-  ROLES
+  scopeToInstitution
 } = require('../middleware/auth');
+const { PERMISSIONS } = require('../config/permissions');
 
 const router = express.Router();
 
@@ -29,22 +29,17 @@ router.use(authenticate);
 router.get('/config', getConfig);
 router.post(
   '/config',
-  authorize([ROLES.PLATFORM_ADMIN, ROLES.AUTHORITY_ADMIN]),
+  authorize([PERMISSIONS.SCORING_CONFIG_UPDATE]),
   createConfig
 );
 
 // 2. Multi-Institution Comparison (anonymised for institution-scoped users)
 router.get('/compare', compareInstitutions);
 
-// 3. Recalculation (Institution users can only recalculate own institution; Authority can recalculate any)
+// 3. Recalculation (Institution users can only recalculate own institution; Authority Admin can recalculate any)
 router.post(
   '/recalculate',
-  authorize([
-    ROLES.PLATFORM_ADMIN,
-    ROLES.AUTHORITY_ADMIN,
-    ROLES.AUTHORITY_OFFICER,
-    ROLES.INSTITUTION_ADMIN
-  ]),
+  authorize([PERMISSIONS.SCORECARDS_RECALCULATE]),
   scopeToInstitution,
   recalculateScore
 );

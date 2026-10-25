@@ -8,7 +8,11 @@
     "dev": "nodemon src/server.js",
     "test": "jest --runInBand --detectOpenHandles --forceExit",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage --runInBand --detectOpenHandles --forceExit"
+    "test:coverage": "jest --coverage --runInBand --detectOpenHandles --forceExit",
+    "seed:demo": "node src/scripts/seedDemoData.js",
+    "seed:demo:verify": "node src/scripts/seedVerifier.js",
+    "demo:tamper": "node src/scripts/tamperDemo.js --tamper",
+    "demo:restore": "node src/scripts/tamperDemo.js --restore"
   },
   "keywords": [
     "express",

@@ -296,7 +296,10 @@ async function listOverlapCases(filters = {}, pagination = {}, user = null) {
  * Retrieves a single overlap case by ID or caseId.
  */
 async function getOverlapCaseById(idOrCaseId, user = null) {
-  const query = idOrCaseId.startsWith('OVR-') ? { caseId: idOrCaseId } : { _id: idOrCaseId };
+  const query =
+    typeof idOrCaseId === 'string' && idOrCaseId.startsWith('OVR-')
+      ? { caseId: idOrCaseId }
+      : { _id: idOrCaseId };
 
   const overlapCase = await OverlapCase.findOne(query)
     .populate('institutions.institutionId', 'name code type')
@@ -368,7 +371,10 @@ async function resolveOverlapCase(idOrCaseId, payload, user) {
     throw error;
   }
 
-  const query = idOrCaseId.startsWith('OVR-') ? { caseId: idOrCaseId } : { _id: idOrCaseId };
+  const query =
+    typeof idOrCaseId === 'string' && idOrCaseId.startsWith('OVR-')
+      ? { caseId: idOrCaseId }
+      : { _id: idOrCaseId };
   const overlapCase = await OverlapCase.findOne(query);
 
   if (!overlapCase) {

@@ -124,6 +124,35 @@ describe('Auth Unit Tests - Permission Matrix', () => {
     expect(hasPermission(ROLES.PLATFORM_ADMIN, PERMISSIONS.AUDIT_READ)).toBe(true);
   });
 
+  it('should deny PLATFORM_ADMIN domain operational permissions (canonical separation of concerns)', () => {
+    // PLATFORM_ADMIN manages system governance, not domain operations
+    expect(hasPermission(ROLES.PLATFORM_ADMIN, PERMISSIONS.ROSTERS_UPLOAD)).toBe(false);
+    expect(hasPermission(ROLES.PLATFORM_ADMIN, PERMISSIONS.ROSTERS_COMMIT)).toBe(false);
+    expect(hasPermission(ROLES.PLATFORM_ADMIN, PERMISSIONS.RECONCILIATION_RUN)).toBe(false);
+    expect(hasPermission(ROLES.PLATFORM_ADMIN, PERMISSIONS.SAMPLING_CREATE)).toBe(false);
+    expect(hasPermission(ROLES.PLATFORM_ADMIN, PERMISSIONS.SCORECARDS_RECALCULATE)).toBe(false);
+    expect(hasPermission(ROLES.PLATFORM_ADMIN, PERMISSIONS.TRANSFERS_CREATE)).toBe(false);
+    expect(hasPermission(ROLES.PLATFORM_ADMIN, PERMISSIONS.TRANSFERS_CONFIRM_OWN_SIDE)).toBe(false);
+  });
+
+  it('should restrict reconciliation runs to Authority roles only (not Institution or Platform Admin)', () => {
+    expect(hasPermission(ROLES.AUTHORITY_ADMIN, PERMISSIONS.RECONCILIATION_RUN)).toBe(true);
+    expect(hasPermission(ROLES.AUTHORITY_OFFICER, PERMISSIONS.RECONCILIATION_RUN)).toBe(true);
+    expect(hasPermission(ROLES.INSTITUTION_ADMIN, PERMISSIONS.RECONCILIATION_RUN)).toBe(false);
+    expect(hasPermission(ROLES.INSTITUTION_OPERATOR, PERMISSIONS.RECONCILIATION_RUN)).toBe(false);
+    expect(hasPermission(ROLES.PLATFORM_ADMIN, PERMISSIONS.RECONCILIATION_RUN)).toBe(false);
+    expect(hasPermission(ROLES.AUDITOR, PERMISSIONS.RECONCILIATION_RUN)).toBe(false);
+  });
+
+  it('should restrict scorecard recalculation to Authority Admin and Institution Admin only', () => {
+    expect(hasPermission(ROLES.AUTHORITY_ADMIN, PERMISSIONS.SCORECARDS_RECALCULATE)).toBe(true);
+    expect(hasPermission(ROLES.INSTITUTION_ADMIN, PERMISSIONS.SCORECARDS_RECALCULATE)).toBe(true);
+    expect(hasPermission(ROLES.AUTHORITY_OFFICER, PERMISSIONS.SCORECARDS_RECALCULATE)).toBe(false);
+    expect(hasPermission(ROLES.PLATFORM_ADMIN, PERMISSIONS.SCORECARDS_RECALCULATE)).toBe(false);
+    expect(hasPermission(ROLES.AUDITOR, PERMISSIONS.SCORECARDS_RECALCULATE)).toBe(false);
+    expect(hasPermission(ROLES.INSTITUTION_OPERATOR, PERMISSIONS.SCORECARDS_RECALCULATE)).toBe(false);
+  });
+
   it('should strictly limit AUDITOR to read-only permissions', () => {
     const auditorPerms = getPermissionsForRole(ROLES.AUDITOR);
     expect(auditorPerms.length).toBeGreaterThan(0);

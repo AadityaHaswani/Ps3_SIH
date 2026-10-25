@@ -14,39 +14,45 @@ const crypto = require('crypto');
 const DEFAULT_SIGNING_KEY_VERSION = 'ed25519_v1';
 const DEFAULT_SIGNER_IDENTITY = 'AICTE_CENTRAL_AUTHORITY_SIGNER';
 
-// In-memory keypair cache for testing/development
-let cachedKeyPair = null;
+// Stable deterministic fallback Ed25519 keypair for local/demo/test environments.
+// Production deployments supply SEAL_SIGNING_PRIVATE_KEY and SEAL_SIGNING_PUBLIC_KEY via environment/vault.
+const DEV_SIGNING_PRIVATE_KEY =
+  '-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIChYYELRAN9LZzCKprAAoI7iSDonmKMggbDh+jnpTGrq\n-----END PRIVATE KEY-----\n';
+const DEV_SIGNING_PUBLIC_KEY =
+  '-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAx5SwhiL2G8tr2Hjl6xz7//AHmRZvb6aAz9bkeD44IBI=\n-----END PUBLIC KEY-----\n';
 
 /**
  * Retrieves the platform Ed25519 signing keypair.
- * Reads from process.env if available; otherwise falls back to a stable in-memory singleton.
+ * Reads from process.env if available; otherwise falls back to a stable deterministic dev keypair.
  *
  * @returns {{ privateKey: (KeyObject|string), publicKey: (KeyObject|string), keyVersion: string }}
  */
 function getSigningKeys() {
-  const envPrivate = process.env.SEAL_SIGNING_PRIVATE_KEY;
-  const envPublic = process.env.SEAL_SIGNING_PUBLIC_KEY;
+  let envPrivate = process.env.SEAL_SIGNING_PRIVATE_KEY;
+  let envPublic = process.env.SEAL_SIGNING_PUBLIC_KEY;
   const keyVersion = process.env.SEAL_SIGNING_KEY_VERSION || DEFAULT_SIGNING_KEY_VERSION;
 
   if (envPrivate && envPublic) {
     try {
+      if (typeof envPrivate === 'string' && envPrivate.includes('\\n')) {
+        envPrivate = envPrivate.replace(/\\n/g, '\n');
+      }
+      if (typeof envPublic === 'string' && envPublic.includes('\\n')) {
+        envPublic = envPublic.replace(/\\n/g, '\n');
+      }
       return {
         privateKey: envPrivate,
         publicKey: envPublic,
         keyVersion
       };
     } catch (e) {
-      // Fall through to memory keypair if env keys invalid
+      // Fall through to dev keypair if env keys invalid
     }
   }
 
-  if (!cachedKeyPair) {
-    cachedKeyPair = crypto.generateKeyPairSync('ed25519');
-  }
-
   return {
-    privateKey: cachedKeyPair.privateKey,
-    publicKey: cachedKeyPair.publicKey,
+    privateKey: DEV_SIGNING_PRIVATE_KEY,
+    publicKey: DEV_SIGNING_PUBLIC_KEY,
     keyVersion
   };
 }

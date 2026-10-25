@@ -3,78 +3,51 @@
  * Mounts endpoints for two-sided transfer handshake, confirmation, rejection, and timeout processing.
  */
 const express = require('express');
-const { authenticate, authorize, ROLES } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
+const { PERMISSIONS } = require('../config/permissions');
 const transferController = require('../controllers/transfer.controller');
 
 const router = express.Router();
 
-const CREATE_ROLES = [
-  ROLES.PLATFORM_ADMIN,
-  ROLES.AUTHORITY_ADMIN,
-  ROLES.AUTHORITY_OFFICER,
-  ROLES.INSTITUTION_ADMIN
-];
-
-const CONFIRM_ROLES = [
-  ROLES.PLATFORM_ADMIN,
-  ROLES.AUTHORITY_ADMIN,
-  ROLES.INSTITUTION_ADMIN
-];
-
-const READ_ROLES = [
-  ROLES.PLATFORM_ADMIN,
-  ROLES.AUTHORITY_ADMIN,
-  ROLES.AUTHORITY_OFFICER,
-  ROLES.AUDITOR,
-  ROLES.INSTITUTION_ADMIN,
-  ROLES.INSTITUTION_OPERATOR
-];
-
-const TIMEOUT_ROLES = [
-  ROLES.PLATFORM_ADMIN,
-  ROLES.AUTHORITY_ADMIN,
-  ROLES.AUTHORITY_OFFICER
-];
-
 router.post(
   '/',
   authenticate,
-  authorize(CREATE_ROLES),
+  authorize([PERMISSIONS.TRANSFERS_CREATE]),
   transferController.createTransfer
 );
 
 router.patch(
   '/:id/confirm',
   authenticate,
-  authorize(CONFIRM_ROLES),
+  authorize([PERMISSIONS.TRANSFERS_CONFIRM_OWN_SIDE]),
   transferController.confirmTransfer
 );
 
 router.patch(
   '/:id/reject',
   authenticate,
-  authorize(CONFIRM_ROLES),
+  authorize([PERMISSIONS.TRANSFERS_CONFIRM_OWN_SIDE]),
   transferController.rejectTransfer
 );
 
 router.get(
   '/',
   authenticate,
-  authorize(READ_ROLES),
+  authorize([PERMISSIONS.TRANSFERS_READ]),
   transferController.listTransfers
 );
 
 router.get(
   '/:id',
   authenticate,
-  authorize(READ_ROLES),
+  authorize([PERMISSIONS.TRANSFERS_READ]),
   transferController.getTransfer
 );
 
 router.post(
   '/process-timeouts',
   authenticate,
-  authorize(TIMEOUT_ROLES),
+  authorize([PERMISSIONS.TRANSFERS_PROCESS_TIMEOUTS]),
   transferController.processTimeouts
 );
 

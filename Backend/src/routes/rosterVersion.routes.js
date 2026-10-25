@@ -4,7 +4,8 @@
  * cryptographic seals, signed receipts, and seal verification under /api/v1/roster-versions.
  */
 const express = require('express');
-const { authenticate, authorize, scopeToInstitution, ROLES } = require('../middleware/auth');
+const { authenticate, authorize, scopeToInstitution } = require('../middleware/auth');
+const { PERMISSIONS } = require('../config/permissions');
 const {
   handleListVersions,
   handleGetChainHead,
@@ -49,12 +50,7 @@ router.post('/:id/verify-seal', handleVerifySeal);
 // 9. Revalidate affected output (Authority and Institution Admins only, strictly forbidden to Auditors)
 router.post(
   '/:id/revalidate',
-  authorize([
-    ROLES.PLATFORM_ADMIN,
-    ROLES.AUTHORITY_ADMIN,
-    ROLES.AUTHORITY_OFFICER,
-    ROLES.INSTITUTION_ADMIN
-  ]),
+  authorize([PERMISSIONS.ROSTER_VERSIONS_REVALIDATE]),
   handleRevalidateOutput
 );
 

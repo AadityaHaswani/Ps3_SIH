@@ -185,7 +185,14 @@ async function getOrCreateBucket({
  * creating an append-only ROSTER_SYNC_ADJUSTMENT entry without double-counting.
  */
 async function syncRosterCommitToLedger(rosterVersion, user = {}) {
-  const { institutionId, academicYear, _id: rosterVersionId } = rosterVersion;
+  let version = rosterVersion;
+  if (!version) return [];
+  if (typeof version === 'string' || !version.institutionId) {
+    const RosterVersion = require('../models/rosterVersion.model');
+    version = await RosterVersion.findById(version._id || version).lean();
+    if (!version) return [];
+  }
+  const { institutionId, academicYear, _id: rosterVersionId } = version;
 
   // 1. Group active rows in this committed roster by programmeCode & category
   const rows = await RosterRow.find({ rosterVersionId }).lean();

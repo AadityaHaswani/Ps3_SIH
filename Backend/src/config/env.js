@@ -74,6 +74,11 @@ function parseAndValidateConfig(env = process.env) {
       pass: env.SMTP_PASS ? env.SMTP_PASS.trim() : null,
       from: env.SMTP_FROM ? env.SMTP_FROM.trim() : null
     },
+    demoSeed: {
+      enabled: env.DEMO_SEED_ENABLED === 'true',
+      password: env.DEMO_SEED_PASSWORD ? env.DEMO_SEED_PASSWORD.trim() : null
+    },
+    authorityOfficerGlobalAccess: env.AUTHORITY_OFFICER_GLOBAL_ACCESS === 'true',
     enableCustomDns: env.ENABLE_CUSTOM_DNS !== 'false'
   };
 }
@@ -93,6 +98,11 @@ try {
       jwtExpiresIn: '7d',
       admin: {},
       smtp: {},
+      demoSeed: {
+        enabled: process.env.DEMO_SEED_ENABLED === 'true',
+        password: process.env.DEMO_SEED_PASSWORD || null
+      },
+      authorityOfficerGlobalAccess: process.env.AUTHORITY_OFFICER_GLOBAL_ACCESS === 'true',
       enableCustomDns: false
     };
   } else {

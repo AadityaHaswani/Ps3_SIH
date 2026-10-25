@@ -10,14 +10,15 @@ const {
   getReconciliationFindings,
   getReconciliationSummary
 } = require('../controllers/reconciliation.controller');
-const { authenticate, authorize, scopeToInstitution, ROLES } = require('../middleware/auth');
+const { authenticate, authorize, scopeToInstitution } = require('../middleware/auth');
+const { PERMISSIONS } = require('../config/permissions');
 
 const router = express.Router();
 
 router.post(
   '/',
   authenticate,
-  authorize([ROLES.PLATFORM_ADMIN, ROLES.AUTHORITY_ADMIN, ROLES.AUTHORITY_OFFICER]),
+  authorize([PERMISSIONS.RECONCILIATION_RUN]),
   scopeToInstitution,
   createReconciliation
 );

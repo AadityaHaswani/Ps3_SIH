@@ -69,6 +69,17 @@ const userSchema = new mongoose.Schema(
       default: true,
       index: true
     },
+    isDemoUser: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    dataMode: {
+      type: String,
+      enum: ['DEMO', 'LIVE'],
+      default: 'LIVE',
+      index: true
+    },
     tokenVersion: {
       type: Number,
       default: 0

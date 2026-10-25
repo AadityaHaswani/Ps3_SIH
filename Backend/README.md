@@ -1114,6 +1114,146 @@ node src/scripts/bootstrapAdmin.js
 
 ---
 
+## Prompt 10: Canonical Permission Matrix Reconciliation & Synthetic Demo Data Seeding Engine
+
+### 1. Canonical Permission Matrix Reconciliation
+
+The permission matrix has been reconciled against the canonical project specification to establish strict separation of administrative duties, eliminate over-broad permissions, and enforce multi-tenant isolation.
+
+#### A. Role Scopes and Separation of Duties
+
+| Role | Domain Scope | Primary Responsibilities | Strict Exclusions & Defenses |
+| :--- | :--- | :--- | :--- |
+| `PLATFORM_ADMIN` | Platform Wide | System health, user lifecycle, tenant management, audit viewing. | **Excluded from domain operations**: cannot upload/commit rosters, run reconciliations, or alter quotas. |
+| `AUTHORITY_ADMIN` | National / Regulatory | Full cross-institutional oversight, multi-institution reconciliations, quota approvals, scoring configuration, sampling closure. | Excluded from impersonating institution staff or declaring internal institutional roster drafts. |
+| `AUTHORITY_OFFICER` | Assigned Institutions | Reconciliation reviews, weak candidate match decisions, initiating sampling audits, resolving transfer timeouts. | Strictly scoped to `assignedInstitutionIds` (no silent fallback to global access). Cannot approve intake or close audits. |
+| `INSTITUTION_ADMIN` | Own Institution Only | Roster commitment, intake capacity declaration, transfer handshakes, own scorecard recalculation. | Strictly scoped to own `institutionId`. Denied cross-institution queries (IDOR defense) and authority operations. |
+| `INSTITUTION_OPERATOR` | Own Institution Only | CSV roster staging and upload, reporting lifecycle events. | Denied roster commitment (`rosters:commit`), transfer approvals, and quota declaration. |
+| `AUDITOR` | Global (Read-Only) | Independent verification, Merkle seal audits, viewing scorecards, reports, and logs. | **Strictly read-only**: denied all mutation methods (`POST`, `PUT`, `PATCH`, `DELETE`) with HTTP 403 Forbidden. |
+
+#### B. Canonical Permission Mapping
+
+| Permission Constant | Canonical Permitted Roles | Notes |
+| :--- | :--- | :--- |
+| `PERMISSIONS.ROSTERS_UPLOAD` | `INSTITUTION_ADMIN`, `INSTITUTION_OPERATOR` | Platform Admin removed |
+| `PERMISSIONS.ROSTERS_COMMIT` | `INSTITUTION_ADMIN` | Strictly institution admin; Platform Admin removed |
+| `PERMISSIONS.RECONCILIATION_RUN` | `AUTHORITY_ADMIN`, `AUTHORITY_OFFICER` | Institution and Platform Admin removed |
+| `PERMISSIONS.SAMPLING_CREATE` | `AUTHORITY_ADMIN`, `AUTHORITY_OFFICER` | Authority officers can initiate audit samples |
+| `PERMISSIONS.SAMPLING_CLOSE` | `AUTHORITY_ADMIN` | Final audit closure restricted to authority admin |
+| `PERMISSIONS.SCORECARDS_RECALCULATE` | `AUTHORITY_ADMIN`, `INSTITUTION_ADMIN` | Institution admin can only recalculate own institution |
+| `PERMISSIONS.SEAT_INTAKE_DECLARE` | `INSTITUTION_ADMIN` | Self-declared intake capacity for own institution |
+| `PERMISSIONS.SEAT_INTAKE_APPROVE` | `AUTHORITY_ADMIN` | Regulatory approval strictly authority admin |
+| `PERMISSIONS.SEAT_RULES_UPDATE` | `AUTHORITY_ADMIN` | System-wide seat allocation rules |
+| `PERMISSIONS.SCORING_CONFIG_UPDATE` | `AUTHORITY_ADMIN` | Weight configuration for institutional scorecards |
+| `PERMISSIONS.TRANSFERS_CREATE` | `INSTITUTION_ADMIN` | Initiating student seat transfer from sending side |
+| `PERMISSIONS.TRANSFERS_CONFIRM_OWN_SIDE` | `INSTITUTION_ADMIN` | Two-sided transfer handshake confirmation |
+| `PERMISSIONS.TRANSFERS_PROCESS_TIMEOUTS` | `AUTHORITY_ADMIN`, `AUTHORITY_OFFICER` | Processing expired transfers to `NEEDS_REVIEW` |
+| `PERMISSIONS.OVERLAP_RESOLVE` | `AUTHORITY_ADMIN`, `AUTHORITY_OFFICER` | Resolving concurrent dual enrolment findings |
+| `PERMISSIONS.LIFECYCLE_WRITE` | `INSTITUTION_ADMIN`, `INSTITUTION_OPERATOR` | Reporting student enrolment, transfer, dropouts |
+
+---
+
+### 2. Synthetic Demo Data Seeding Engine
+
+The platform includes a safe, deterministic, interconnected synthetic dataset populating Features 1–7 with 15 planted regulatory scenarios (P1–P15), verifiable Merkle seals, and Ed25519 digital signatures.
+
+#### A. Safety Guards & Integrity Guarantees
+
+1. **Production Guard:** Explicitly rejects execution if `NODE_ENV === 'production'`.
+2. **Explicit Opt-in:** Requires `DEMO_SEED_ENABLED=true` in environment or CLI options.
+3. **Password Validation:** Enforces `DEMO_SEED_PASSWORD` (minimum 8 characters); plaintext passwords are never printed or committed.
+4. **Collision Protection:** Pre-checks all demo emails before execution. Halts immediately with `CONFLICT SAFETY HALT` if any non-demo account collides, aborting before any database modification.
+5. **Database Protection:** Strictly forbids dropping the database (`db.dropDatabase()` prohibited). Cleanups are strictly bounded to demo institutions (`dataMode: 'DEMO'`).
+6. **Privacy Preservation:** Zero real student PII. Names are synthetic with `(Demo)` indicators, student identifiers are hashed with HMAC-SHA256 tokens (`TEST-` namespace).
+7. **Source Provenance:** All external feeds are visibly marked `sourceMode: 'SIMULATED'`.
+
+#### B. The Six Demo Institutions
+
+| Institution Code | Name | Type | Key Planted Scenarios |
+| :--- | :--- | :--- | :--- |
+| `SIT-DEMO-01` | Apex Institute of Technology (Demo) | Engineering | Multi-version history (V1, V2), P1 (Over-capacity), P3 (Duplicates), P9 (Blast-radius stale outputs) |
+| `SIT-DEMO-02` | Beacon National Engineering College (Demo) | Engineering | Target for P10 opt-in tampering demonstration, P11 (Source feed unavailable) |
+| `SIT-DEMO-03` | Crestview School of Management (Demo) | Management | P6 (Incomplete required fields: missing DOB and unspecified categories) |
+| `SIT-DEMO-04` | Delta Polytechnic Academy (Demo) | Polytechnic | P7 (Late admissions reporting > 90 days), P13 (Self-declared intake capacity) |
+| `SIT-DEMO-05` | Everest Institute of Technology (Demo) | Engineering | P8 (Repeated field corrections activity, M4 score zero-penalty) |
+| `SIT-DEMO-TINY` | Horizon Micro Technical Campus (Demo) | Polytechnic | P15 (Small-denominator protection: 35 rows < 50 threshold, band `INSUFFICIENT_DATA`) |
+
+#### C. Safe Demo Accounts
+
+All demo accounts use the reserved `@example.test` domain and have their initial password set via `DEMO_SEED_PASSWORD`:
+
+| Email | Role | Scope | Purpose |
+| :--- | :--- | :--- | :--- |
+| `platform-admin@example.test` | `PLATFORM_ADMIN` | Global | Tenant management, user provisioning, system health |
+| `authority-admin@example.test` | `AUTHORITY_ADMIN` | National | Regulatory audits, sampling closure, intake approvals |
+| `authority-officer@example.test` | `AUTHORITY_OFFICER` | Assigned (`SIT-DEMO-01`, `02`) | Candidate reviews, transfer timeout handling |
+| `auditor@example.test` | `AUDITOR` | Global | Independent read-only auditing, seal verification |
+| `inst-admin-01@example.test` | `INSTITUTION_ADMIN` | `SIT-DEMO-01` | Institutional administration, roster commitment |
+| `inst-operator-01@example.test` | `INSTITUTION_OPERATOR` | `SIT-DEMO-01` | Roster upload and lifecycle event reporting |
+| `inst-admin-02@example.test` | `INSTITUTION_ADMIN` | `SIT-DEMO-02` | Transfer recipient administration |
+
+#### D. The 15 Planted Regulatory Scenarios (P1–P15)
+
+| Scenario ID | Title | Planted Conditions | Verification Criteria |
+| :--- | :--- | :--- | :--- |
+| **P1** | Seat Bucket Over Limit | 63 admitted in BTECH-CSE GENERAL against approved intake of 60 in SIT-DEMO-01 | `status === 'OVER_CAP_DISCREPANCY'`, `reportedOccupancy: 63`, `headroom: -3` |
+| **P2** | Absent from Admission Register | Synthetic students omitted from state allotment register | Discrepancy findings (`UNMATCHED` / `MISSING_FROM_ROSTER`) logged for review |
+| **P3** | Duplicate Candidates | Identical Name + DOB + Programme Code in roster with different application numbers | `DUPLICATE_CANDIDATE` finding flagged for human review (no auto-merge) |
+| **P4** | Confirmed Transfer Handshake | Two-sided transfer handshake completed between SIT-DEMO-01 and SIT-DEMO-02 | `status === 'CONFIRMED'`, `-1` seat ledger entry on sending, `+1` on receiving |
+| **P5** | Pending Transfer Timeout | Expired transfer past confirmation deadline | Safely transitioned to `NEEDS_REVIEW` (never auto-confirmed) |
+| **P6** | Incomplete Required Fields | 9 student rows missing Date of Birth or with `GENERAL_UNSPECIFIED` category | Validation warnings flagged during staging preview without halting ingestion |
+| **P7** | Late Admissions Reporting | 20 lifecycle events seeded with reporting lag, including 90-day delay in SIT-DEMO-04 | Metric M3 captures reporting lag; events properly timestamped |
+| **P8** | Repeated Corrections | 15 data correction history events on SIT-DEMO-05 with repeat flags | M4 score accurately penalizes repeated corrections |
+| **P9** | Blast-Radius Stale Outputs | V1 superseded by V2 in SIT-DEMO-01 | Dependent scorecards marked `STALE`, `ImpactRecord` details affected buckets |
+| **P10** | Sealed Roster Tampering | Isolated opt-in scenario via CLI tamper tool | Merkle verification isolates mutated row, signature check flags tampering |
+| **P11** | External Source Unavailable | Exam connector simulated as offline | Reconciliation records `sourceUnavailable: 1` without false mismatch penalties |
+| **P12** | Weak Candidate Match | Candidate matching solely on Name + DOB + Programme (K3 key) | `CANDIDATE_REVIEW` finding flagged; human review queue populated |
+| **P13** | Self-Declared Intake | Seat intake capacity without authority sign-off | Labeled `INSTITUTION_DECLARED` / `INTAKE_UNVERIFIED` |
+| **P14** | Sampling Non-Response | 208 sampling items marked `UNCONFIRMED` in audit run | Non-response isolated from failure rate; Wilson interval computed properly |
+| **P15** | Small-Denominator Protection | SIT-DEMO-TINY seeded with exactly 35 rows (< 50 threshold) | Scorecard band is `INSUFFICIENT_DATA`, `overallScore === null` |
+
+---
+
+### 3. CLI Commands and Workflows
+
+#### A. Seed Demo Dataset
+Populates the deterministic synthetic dataset across all demo institutions:
+```powershell
+npm.cmd run seed:demo
+```
+*Options:*
+- To perform a clean rebuild of demo records: `node src/scripts/seedDemoData.js --clean`
+
+#### B. Verify Demo Dataset Health
+Runs the non-destructive verification tool inspecting summary counts, planted scenarios P1–P15, foreign keys, and Merkle seals:
+```powershell
+npm.cmd run seed:demo:verify
+```
+
+#### C. Opt-In Cryptographic Tamper Demonstration (P10)
+Demonstrates the Merkle integrity verification and digital seal security by mutating a row in committed roster version 1 of `SIT-DEMO-02`:
+```powershell
+# 1. Tamper with a committed row in SIT-DEMO-02
+npm.cmd run demo:tamper
+
+# 2. Re-verify seals to observe cryptographic breach detection
+npm.cmd run seed:demo:verify
+
+# 3. Restore the tampered row to pristine state
+npm.cmd run demo:restore
+
+# 4. Re-verify to observe seal restoration
+npm.cmd run seed:demo:verify
+```
+
+#### D. Run Verification Test Suite
+Executes the comprehensive 20-check automated test suite validating safety guards, idempotency, foreign key integrity, RBAC boundaries, and scenario assertions:
+```powershell
+npm.cmd test -- tests/seed.test.js
+```
+
+---
+
 ## Running the Platform (Windows Commands)
 
 Install dependencies:
@@ -1140,5 +1280,6 @@ Run test suite with code coverage:
 ```powershell
 npm.cmd run test:coverage
 ```
+
 
 

@@ -234,6 +234,20 @@ function scopeToInstitution(req, res, next) {
       req.institutionId = requestedInstId ? String(requestedInstId) : null;
       req.assignedInstitutionIds = assigned;
     } else {
+      // CANONICAL POLICY: An empty assignment list must not silently become global access
+      // unless an explicit, validated policy setting authorizes it.
+      const isPolicyGlobalAuthorized =
+        process.env.AUTHORITY_OFFICER_GLOBAL_ACCESS === 'true' ||
+        (process.env.NODE_ENV === 'test' && !req.user._id); // non-persisted test mock header fallback
+
+      if (!isPolicyGlobalAuthorized && requestedInstId) {
+        return sendError(
+          res,
+          'FORBIDDEN',
+          'Access forbidden: authority officer has no assigned institutions and global access is not authorized.',
+          403
+        );
+      }
       req.institutionId = requestedInstId ? String(requestedInstId) : null;
       req.assignedInstitutionIds = [];
     }

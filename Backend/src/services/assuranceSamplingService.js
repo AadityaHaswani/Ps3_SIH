@@ -366,19 +366,24 @@ async function getSamplingItems(samplingRunId, filter = {}, { page = 1, limit = 
  */
 async function recordItemVerification({
   itemId,
+  samplingItemId,
   verificationStatus,
   verificationMethod = null,
   evidenceRef = null,
+  evidenceReference = null,
   notes = null,
   exclusionReason = null,
   user = {}
 }) {
+  const actualId = itemId || samplingItemId;
+  const actualEvidence = evidenceRef || evidenceReference || null;
+
   const validStatuses = ['VERIFIED', 'FAILED_CHECK', 'UNCONFIRMED', 'EXCLUDED'];
   if (!validStatuses.includes(verificationStatus)) {
     throw new Error(`Invalid verification status: ${verificationStatus}. Must be one of: ${validStatuses.join(', ')}.`);
   }
 
-  const item = await SamplingItem.findById(itemId);
+  const item = await SamplingItem.findById(actualId);
   if (!item) {
     throw new Error('Sampling item not found.');
   }
@@ -404,7 +409,7 @@ async function recordItemVerification({
     previousStatus: prevStatus,
     newStatus: verificationStatus,
     verificationMethod: verificationMethod || null,
-    evidenceRef: evidenceRef || null,
+    evidenceRef: actualEvidence,
     notes: notes || null,
     updatedBy: {
       userId: user.id || 'reviewer',
@@ -416,7 +421,7 @@ async function recordItemVerification({
 
   item.verificationStatus = verificationStatus;
   item.verificationMethod = verificationMethod || null;
-  item.evidenceRef = evidenceRef || null;
+  item.evidenceRef = actualEvidence;
   item.notes = notes || null;
   item.exclusionReason = verificationStatus === 'EXCLUDED' ? exclusionReason : null;
   item.verifiedBy = {

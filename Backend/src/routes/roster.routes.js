@@ -11,7 +11,8 @@ const {
   commitRoster,
   getRoster
 } = require('../controllers/roster.controller');
-const { authenticate, authorize, scopeToInstitution, ROLES } = require('../middleware/auth');
+const { authenticate, authorize, scopeToInstitution } = require('../middleware/auth');
+const { PERMISSIONS } = require('../config/permissions');
 
 const router = express.Router();
 
@@ -31,7 +32,7 @@ const upload = multer({
 router.post(
   '/upload',
   authenticate,
-  authorize([ROLES.PLATFORM_ADMIN, ROLES.INSTITUTION_ADMIN, ROLES.INSTITUTION_OPERATOR]),
+  authorize([PERMISSIONS.ROSTERS_UPLOAD]),
   upload.single('file'),
   scopeToInstitution,
   uploadRoster
@@ -42,7 +43,7 @@ router.get('/:id/preview', authenticate, scopeToInstitution, getPreview);
 router.post(
   '/:id/commit',
   authenticate,
-  authorize([ROLES.PLATFORM_ADMIN, ROLES.INSTITUTION_ADMIN]),
+  authorize([PERMISSIONS.ROSTERS_COMMIT]),
   scopeToInstitution,
   commitRoster
 );

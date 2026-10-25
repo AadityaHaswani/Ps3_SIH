@@ -3,39 +3,23 @@
  * Mounts endpoints for recording lifecycle events, corrections, and student timelines.
  */
 const express = require('express');
-const { authenticate, authorize, ROLES } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
+const { PERMISSIONS } = require('../config/permissions');
 const lifecycleController = require('../controllers/lifecycle.controller');
 
 const router = express.Router();
 
-const MUTATION_ROLES = [
-  ROLES.PLATFORM_ADMIN,
-  ROLES.AUTHORITY_ADMIN,
-  ROLES.AUTHORITY_OFFICER,
-  ROLES.INSTITUTION_ADMIN,
-  ROLES.INSTITUTION_OPERATOR
-];
-
-const READ_ROLES = [
-  ROLES.PLATFORM_ADMIN,
-  ROLES.AUTHORITY_ADMIN,
-  ROLES.AUTHORITY_OFFICER,
-  ROLES.AUDITOR,
-  ROLES.INSTITUTION_ADMIN,
-  ROLES.INSTITUTION_OPERATOR
-];
-
 router.post(
   '/events',
   authenticate,
-  authorize(MUTATION_ROLES),
+  authorize([PERMISSIONS.LIFECYCLE_WRITE]),
   lifecycleController.recordEvent
 );
 
 router.get(
   '/students/:tokenId/events',
   authenticate,
-  authorize(READ_ROLES),
+  authorize([PERMISSIONS.LIFECYCLE_READ]),
   lifecycleController.getTimeline
 );
 

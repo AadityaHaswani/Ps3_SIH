@@ -19,79 +19,54 @@ const {
 const {
   authenticate,
   authorize,
-  scopeToInstitution,
-  ROLES
+  scopeToInstitution
 } = require('../middleware/auth');
+const { PERMISSIONS } = require('../config/permissions');
 
 const router = express.Router();
 
 // All ledger routes require authentication
 router.use(authenticate);
 
-const ALL_ROLES = [
-  ROLES.PLATFORM_ADMIN,
-  ROLES.AUTHORITY_ADMIN,
-  ROLES.AUTHORITY_OFFICER,
-  ROLES.AUDITOR,
-  ROLES.INSTITUTION_ADMIN,
-  ROLES.INSTITUTION_OPERATOR
-];
-
-const AUTHORITY_ROLES = [
-  ROLES.PLATFORM_ADMIN,
-  ROLES.AUTHORITY_ADMIN
-];
-
-const AUDIT_ROLES = [
-  ROLES.PLATFORM_ADMIN,
-  ROLES.AUTHORITY_ADMIN,
-  ROLES.AUDITOR
-];
-
-const DECLARATION_ROLES = [
-  ROLES.PLATFORM_ADMIN,
-  ROLES.INSTITUTION_ADMIN
-];
-
 // Balance queries & historical timelines
 router.get(
   '/balances',
-  authorize(ALL_ROLES),
+  authorize([PERMISSIONS.SEAT_LEDGER_READ]),
   scopeToInstitution,
   getSeatBalances
 );
 
 router.get(
   '/balances/:id',
-  authorize(ALL_ROLES),
+  authorize([PERMISSIONS.SEAT_LEDGER_READ]),
   scopeToInstitution,
   getSeatBalanceDetail
 );
 
 router.get(
   '/balances/:id/entries',
-  authorize(ALL_ROLES),
+  authorize([PERMISSIONS.SEAT_LEDGER_READ]),
   scopeToInstitution,
   getSeatBalanceEntries
 );
 
 router.get(
   '/history',
-  authorize(ALL_ROLES),
+  authorize([PERMISSIONS.SEAT_LEDGER_READ]),
   scopeToInstitution,
   getSeatBalanceHistory
 );
 
-// Intake Governance
+// Intake Governance: Institution self-declarations
 router.post(
   '/intake-declarations',
-  authorize(DECLARATION_ROLES),
+  authorize([PERMISSIONS.SEAT_INTAKE_DECLARE]),
   scopeToInstitution,
   declareIntake
 );
 router.post(
   '/intake/declare',
-  authorize(DECLARATION_ROLES),
+  authorize([PERMISSIONS.SEAT_INTAKE_DECLARE]),
   scopeToInstitution,
   declareIntake
 );
@@ -99,27 +74,27 @@ router.post(
 // Authority approved intake configuration (Institution users explicitly excluded)
 router.put(
   '/intake',
-  authorize(AUTHORITY_ROLES),
+  authorize([PERMISSIONS.SEAT_INTAKE_APPROVE]),
   updateApprovedIntake
 );
 
 // Occupancy Rules
 router.get(
   '/rules',
-  authorize(ALL_ROLES),
+  authorize([PERMISSIONS.SEAT_LEDGER_READ]),
   getOccupancyRules
 );
 
 router.post(
   '/rules',
-  authorize(AUTHORITY_ROLES),
+  authorize([PERMISSIONS.SEAT_RULES_UPDATE]),
   createRule
 );
 
 // Ledger Integrity Auditing
 router.post(
   '/verify-integrity',
-  authorize(AUDIT_ROLES),
+  authorize([PERMISSIONS.SEAT_LEDGER_AUDIT]),
   scopeToInstitution,
   verifyIntegrity
 );
@@ -127,7 +102,7 @@ router.post(
 // Academic Mass-Balance
 router.get(
   '/mass-balance',
-  authorize(ALL_ROLES),
+  authorize([PERMISSIONS.SEAT_LEDGER_READ]),
   scopeToInstitution,
   getMassBalance
 );

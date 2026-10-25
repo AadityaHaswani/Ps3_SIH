@@ -8,7 +8,8 @@ const {
   handleCreateUser,
   handleUpdateUser
 } = require('../controllers/user.controller');
-const { authenticate, authorize, ROLES } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
+const { PERMISSIONS } = require('../config/permissions');
 
 const router = express.Router();
 
@@ -18,21 +19,21 @@ router.use(authenticate);
 // 1. List users (PLATFORM_ADMIN, AUTHORITY_ADMIN)
 router.get(
   '/',
-  authorize([ROLES.PLATFORM_ADMIN, ROLES.AUTHORITY_ADMIN]),
+  authorize([PERMISSIONS.USERS_READ]),
   handleListUsers
 );
 
 // 2. Create user (PLATFORM_ADMIN only)
 router.post(
   '/',
-  authorize([ROLES.PLATFORM_ADMIN]),
+  authorize([PERMISSIONS.USERS_CREATE]),
   handleCreateUser
 );
 
 // 3. Update user role, status, or scope (PLATFORM_ADMIN only)
 router.patch(
   '/:id',
-  authorize([ROLES.PLATFORM_ADMIN]),
+  authorize([PERMISSIONS.USERS_UPDATE]),
   handleUpdateUser
 );
 

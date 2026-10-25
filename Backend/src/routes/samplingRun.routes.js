@@ -18,36 +18,24 @@ const {
   scopeToInstitution,
   ROLES
 } = require('../middleware/auth');
+const { PERMISSIONS } = require('../config/permissions');
 
 const router = express.Router();
 
 router.use(authenticate);
 
-const REVIEW_ROLES = [
-  ROLES.PLATFORM_ADMIN,
-  ROLES.AUTHORITY_ADMIN,
-  ROLES.AUTHORITY_OFFICER,
-  ROLES.AUDITOR
-];
-
-const AUTHORITY_ADMIN_ROLES = [
-  ROLES.PLATFORM_ADMIN,
-  ROLES.AUTHORITY_ADMIN,
-  ROLES.AUTHORITY_OFFICER
-];
-
-// Preview sample size without persisting
+// Preview sample size without persisting (Read-only inspection: Authority reviewers and Auditors)
 router.post(
   '/preview-size',
-  authorize(REVIEW_ROLES),
+  authorize([ROLES.AUTHORITY_ADMIN, ROLES.AUTHORITY_OFFICER, ROLES.AUDITOR]),
   scopeToInstitution,
   previewSize
 );
 
-// Create / execute Assurance Sampling run
+// Create / execute Assurance Sampling run (Authority Reviewers only)
 router.post(
   '/',
-  authorize(AUTHORITY_ADMIN_ROLES),
+  authorize([PERMISSIONS.SAMPLING_CREATE]),
   scopeToInstitution,
   createRun
 );
@@ -73,10 +61,10 @@ router.get(
   getItems
 );
 
-// Formally close a sampling run
+// Formally close a sampling run (Authority Admin only)
 router.post(
   '/:id/close',
-  authorize(AUTHORITY_ADMIN_ROLES),
+  authorize([PERMISSIONS.SAMPLING_CLOSE]),
   scopeToInstitution,
   closeRun
 );

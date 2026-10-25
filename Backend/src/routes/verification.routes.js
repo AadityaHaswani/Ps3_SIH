@@ -4,7 +4,8 @@
  * subject lookups, and connector status under /api/v1/verifications.
  */
 const express = require('express');
-const { authenticate, authorize, ROLES } = require('../middleware/auth');
+const { authenticate, authorize } = require('../middleware/auth');
+const { PERMISSIONS } = require('../config/permissions');
 const {
   handleRequestVerification,
   handleReviewVerification,
@@ -24,34 +25,21 @@ router.get('/by-subject', handleGetBySubject);
 // 2. Request verification (institution admin/operator, authority roles)
 router.post(
   '/request',
-  authorize([
-    ROLES.PLATFORM_ADMIN,
-    ROLES.AUTHORITY_ADMIN,
-    ROLES.AUTHORITY_OFFICER,
-    ROLES.INSTITUTION_ADMIN,
-    ROLES.INSTITUTION_OPERATOR
-  ]),
+  authorize([PERMISSIONS.VERIFICATION_REQUEST]),
   handleRequestVerification
 );
 
 // 3. Review verification (authority officers & admins only, strictly forbidden to institutions and auditors)
 router.patch(
   '/:id/review',
-  authorize([ROLES.PLATFORM_ADMIN, ROLES.AUTHORITY_ADMIN, ROLES.AUTHORITY_OFFICER]),
+  authorize([PERMISSIONS.VERIFICATION_REVIEW]),
   handleReviewVerification
 );
 
 // 4. List verification records with institution scoping
 router.get(
   '/',
-  authorize([
-    ROLES.PLATFORM_ADMIN,
-    ROLES.AUTHORITY_ADMIN,
-    ROLES.AUTHORITY_OFFICER,
-    ROLES.AUDITOR,
-    ROLES.INSTITUTION_ADMIN,
-    ROLES.INSTITUTION_OPERATOR
-  ]),
+  authorize([PERMISSIONS.VERIFICATION_READ]),
   handleListVerifications
 );
 
