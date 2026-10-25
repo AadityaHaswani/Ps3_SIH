@@ -34,7 +34,12 @@ const userSchema = new mongoose.Schema(
     },
     passwordHash: {
       type: String,
-      required: [true, 'Password hash is required.'],
+      required: [
+        function () {
+          return this.isActivated;
+        },
+        'Password hash is required for activated accounts.'
+      ],
       select: false // Excluded from default queries to avoid accidental leakage
     },
     name: {
@@ -68,6 +73,33 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
       index: true
+    },
+    isActivated: {
+      type: Boolean,
+      default: false,
+      index: true
+    },
+    emailVerified: {
+      type: Boolean,
+      default: false
+    },
+    activationTokenHash: {
+      type: String,
+      default: null,
+      select: false
+    },
+    activationTokenExpiresAt: {
+      type: Date,
+      default: null,
+      select: false
+    },
+    activationTokenSentAt: {
+      type: Date,
+      default: null
+    },
+    activatedAt: {
+      type: Date,
+      default: null
     },
     isDemoUser: {
       type: Boolean,
@@ -119,6 +151,8 @@ userSchema.methods.isLocked = function () {
 userSchema.set('toJSON', {
   transform: (doc, ret) => {
     delete ret.passwordHash;
+    delete ret.activationTokenHash;
+    delete ret.activationTokenExpiresAt;
     delete ret.__v;
     return ret;
   }
@@ -127,6 +161,8 @@ userSchema.set('toJSON', {
 userSchema.set('toObject', {
   transform: (doc, ret) => {
     delete ret.passwordHash;
+    delete ret.activationTokenHash;
+    delete ret.activationTokenExpiresAt;
     delete ret.__v;
     return ret;
   }

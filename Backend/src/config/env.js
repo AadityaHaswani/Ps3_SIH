@@ -79,7 +79,22 @@ function parseAndValidateConfig(env = process.env) {
       password: env.DEMO_SEED_PASSWORD ? env.DEMO_SEED_PASSWORD.trim() : null
     },
     authorityOfficerGlobalAccess: env.AUTHORITY_OFFICER_GLOBAL_ACCESS === 'true',
-    enableCustomDns: env.ENABLE_CUSTOM_DNS !== 'false'
+    enableCustomDns: env.ENABLE_CUSTOM_DNS !== 'false',
+    resend: {
+      apiKey: env.RESEND_API_KEY ? env.RESEND_API_KEY.trim() : null,
+      from: env.MAIL_FROM ? env.MAIL_FROM.trim() : 'AICTE Seat Matrix <noreply@aicte-india.org>'
+    },
+    appBaseUrl: env.APP_BASE_URL ? env.APP_BASE_URL.trim() : (env.CLIENT_URL ? env.CLIENT_URL.trim() : 'http://localhost:5173'),
+    auth: {
+      activationTokenExpiryMinutes: parseInt(env.ACTIVATION_TOKEN_EXPIRY_MINUTES || '1440', 10),
+      otpExpiryMinutes: parseInt(env.OTP_EXPIRY_MINUTES || '10', 10),
+      otpMaxAttempts: parseInt(env.OTP_MAX_ATTEMPTS || '5', 10)
+    },
+    seal: {
+      signingPrivateKey: env.SEAL_SIGNING_PRIVATE_KEY ? env.SEAL_SIGNING_PRIVATE_KEY.trim() : null,
+      signingPublicKey: env.SEAL_SIGNING_PUBLIC_KEY ? env.SEAL_SIGNING_PUBLIC_KEY.trim() : null,
+      signingKeyVersion: env.SEAL_SIGNING_KEY_VERSION ? env.SEAL_SIGNING_KEY_VERSION.trim() : 'ed25519_v1'
+    }
   };
 }
 
@@ -103,7 +118,22 @@ try {
         password: process.env.DEMO_SEED_PASSWORD || null
       },
       authorityOfficerGlobalAccess: process.env.AUTHORITY_OFFICER_GLOBAL_ACCESS === 'true',
-      enableCustomDns: false
+      enableCustomDns: false,
+      resend: {
+        apiKey: null,
+        from: 'AICTE Seat Matrix <noreply@aicte-india.org>'
+      },
+      appBaseUrl: 'http://localhost:5173',
+      auth: {
+        activationTokenExpiryMinutes: 1440,
+        otpExpiryMinutes: 10,
+        otpMaxAttempts: 5
+      },
+      seal: {
+        signingPrivateKey: null,
+        signingPublicKey: null,
+        signingKeyVersion: 'ed25519_v1'
+      }
     };
   } else {
     // In dev/prod, fail fast with sanitised error

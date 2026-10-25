@@ -32,6 +32,14 @@ function getSigningKeys() {
   let envPublic = process.env.SEAL_SIGNING_PUBLIC_KEY;
   const keyVersion = process.env.SEAL_SIGNING_KEY_VERSION || DEFAULT_SIGNING_KEY_VERSION;
 
+  if (process.env.NODE_ENV === 'production') {
+    if (!envPrivate || !envPublic) {
+      throw new Error(
+        'SECURITY_ERROR: Production environment requires explicitly configured SEAL_SIGNING_PRIVATE_KEY and SEAL_SIGNING_PUBLIC_KEY. Fallback development keys are strictly forbidden.'
+      );
+    }
+  }
+
   if (envPrivate && envPublic) {
     try {
       if (typeof envPrivate === 'string' && envPrivate.includes('\\n')) {
@@ -46,8 +54,19 @@ function getSigningKeys() {
         keyVersion
       };
     } catch (e) {
-      // Fall through to dev keypair if env keys invalid
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+          `SECURITY_ERROR: Failed to parse configured Ed25519 signing keys in production: ${e.message}`
+        );
+      }
+      // Fall through to dev keypair if env keys invalid in dev/test
     }
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'SECURITY_ERROR: Production environment requires explicitly configured SEAL_SIGNING_PRIVATE_KEY and SEAL_SIGNING_PUBLIC_KEY. Fallback development keys are strictly forbidden.'
+    );
   }
 
   return {

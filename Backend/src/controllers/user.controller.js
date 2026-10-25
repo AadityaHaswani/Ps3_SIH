@@ -8,11 +8,13 @@
  * - Enforces required institutionId for institution roles.
  * - Increments tokenVersion on role/status/scope change for immediate session revocation.
  */
+const crypto = require('crypto');
 const mongoose = require('mongoose');
 const User = require('../models/user.model');
 const RefreshToken = require('../models/refreshToken.model');
 const { hashPassword } = require('../utils/passwordCrypto');
 const { logAuditEvent } = require('../services/auditService');
+const { sendActivationEmail } = require('../services/emailService');
 const { sendSuccess, sendError } = require('../utils/apiResponse');
 const { ROLES } = require('../config/permissions');
 
@@ -67,21 +69,23 @@ async function handleListUsers(req, res, next) {
 
 /**
  * POST /api/v1/users
- * Creates a new user account (PLATFORM_ADMIN only).
+ * Creates a new user account in pending activation state (PLATFORM_ADMIN only).
+ * Generates a single-use cryptographically random activation token, stores its SHA-256 hash,
+ * and sends an activation email with invitation link via Resend.
  */
 async function handleCreateUser(req, res, next) {
   try {
     const { email, password, name, role, institutionId, assignedInstitutionIds } = req.body;
 
-    if (!email || !password || !name || !role) {
-      return sendError(res, 'VALIDATION_ERROR', 'email, password, name, and role are required.', 400);
+    if (!email || !name || !role) {
+      return sendError(res, 'VALIDATION_ERROR', 'email, name, and role are required.', 400);
     }
 
     if (!Object.values(ROLES).includes(role)) {
       return sendError(res, 'VALIDATION_ERROR', `Invalid role '${role}'. Must be one of: ${Object.values(ROLES).join(', ')}`, 400);
     }
 
-    if (typeof password !== 'string' || password.length < 8) {
+    if (password !== undefined && password !== null && (typeof password !== 'string' || password.length < 8)) {
       return sendError(res, 'VALIDATION_ERROR', 'Password must be at least 8 characters long.', 400);
     }
 
@@ -107,7 +111,16 @@ async function handleCreateUser(req, res, next) {
       assignedList = assignedInstitutionIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
     }
 
-    const passwordHash = await hashPassword(password);
+    // Generate single-use cryptographically random activation token
+    const rawActivationToken = crypto.randomBytes(32).toString('hex');
+    const activationTokenHash = crypto.createHash('sha256').update(rawActivationToken).digest('hex');
+    const expiresMinutes = parseInt(process.env.ACTIVATION_TOKEN_EXPIRY_MINUTES, 10) || 1440;
+    const activationTokenExpiresAt = new Date(Date.now() + expiresMinutes * 60 * 1000);
+
+    let passwordHash = null;
+    if (password) {
+      passwordHash = await hashPassword(password);
+    }
 
     const user = await User.create({
       email: normalizedEmail,
@@ -117,7 +130,20 @@ async function handleCreateUser(req, res, next) {
       institutionId: instId,
       assignedInstitutionIds: assignedList,
       isActive: true,
+      isActivated: false,
+      emailVerified: false,
+      activationTokenHash,
+      activationTokenExpiresAt,
+      activationTokenSentAt: new Date(),
       tokenVersion: 0
+    });
+
+    // Dispatch activation invitation email via Resend
+    await sendActivationEmail({
+      to: user.email,
+      name: user.name,
+      activationToken: rawActivationToken,
+      expiresMinutes
     });
 
     await logAuditEvent({
@@ -126,10 +152,63 @@ async function handleCreateUser(req, res, next) {
       entityId: user._id,
       institutionId: user.institutionId,
       performedBy: req.user,
-      details: { email: user.email, role: user.role }
+      details: { email: user.email, role: user.role, isActivated: false }
     });
 
+    // Never return the activation token or hash in the response
     return sendSuccess(res, user.toJSON(), 201);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * POST /api/v1/users/:id/resend-activation
+ * Resends activation invitation email with a fresh single-use activation token (PLATFORM_ADMIN only).
+ */
+async function handleResendActivation(req, res, next) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return sendError(res, 'VALIDATION_ERROR', 'Invalid user ID format.', 400);
+    }
+
+    const user = await User.findById(id).select('+activationTokenHash +activationTokenExpiresAt');
+    if (!user) {
+      return sendError(res, 'NOT_FOUND', 'User not found.', 404);
+    }
+
+    if (user.isActivated) {
+      return sendError(res, 'ALREADY_ACTIVATED', 'This user account is already activated.', 400);
+    }
+
+    const rawActivationToken = crypto.randomBytes(32).toString('hex');
+    const activationTokenHash = crypto.createHash('sha256').update(rawActivationToken).digest('hex');
+    const expiresMinutes = parseInt(process.env.ACTIVATION_TOKEN_EXPIRY_MINUTES, 10) || 1440;
+    const activationTokenExpiresAt = new Date(Date.now() + expiresMinutes * 60 * 1000);
+
+    user.activationTokenHash = activationTokenHash;
+    user.activationTokenExpiresAt = activationTokenExpiresAt;
+    user.activationTokenSentAt = new Date();
+    await user.save();
+
+    await sendActivationEmail({
+      to: user.email,
+      name: user.name,
+      activationToken: rawActivationToken,
+      expiresMinutes
+    });
+
+    await logAuditEvent({
+      action: 'USER_ACTIVATION_RESENT',
+      entityType: 'User',
+      entityId: user._id,
+      institutionId: user.institutionId,
+      performedBy: req.user,
+      details: { email: user.email }
+    });
+
+    return sendSuccess(res, { message: 'Activation invitation email resent successfully.' }, 200);
   } catch (err) {
     next(err);
   }
@@ -250,5 +329,6 @@ async function handleUpdateUser(req, res, next) {
 module.exports = {
   handleListUsers,
   handleCreateUser,
+  handleResendActivation,
   handleUpdateUser
 };

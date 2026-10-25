@@ -171,7 +171,7 @@ describe('Feature 7: Sealed Roster & Change Blast-Radius Integration Suite', () 
       Programme.deleteMany({ institutionId: { $in: [instAId, instBId] } }),
       RosterUpload.deleteMany({ institutionId: { $in: [instAId, instBId] } }),
       RosterVersion.deleteMany({ institutionId: { $in: [instAId, instBId] } }),
-      RosterRow.deleteMany({}),
+      RosterRow.deleteMany({ institutionId: { $in: [instAId, instBId] } }),
       IntegritySeal.deleteMany({ institutionId: { $in: [instAId, instBId] } }),
       SealAnchor.deleteMany({ institutionId: { $in: [instAId, instBId] } }),
       ImpactRecord.deleteMany({ institutionId: { $in: [instAId, instBId] } }),

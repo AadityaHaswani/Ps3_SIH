@@ -19,6 +19,7 @@ const Institution = require('../src/models/institution.model');
 const { hashPassword } = require('../src/utils/passwordCrypto');
 const { ROLES } = require('../src/config/permissions');
 const { generateAccessToken, generateRefreshToken, hashToken } = require('../src/utils/tokenService');
+const { getLatestOtpForTesting } = require('../src/services/emailService');
 
 describe('Auth & Platform Security Integration Suite', () => {
   const instAId = new mongoose.Types.ObjectId();
@@ -65,6 +66,8 @@ describe('Auth & Platform Security Integration Suite', () => {
       name: 'Platform Super Admin',
       role: ROLES.PLATFORM_ADMIN,
       isActive: true,
+      isActivated: true,
+      emailVerified: true,
       tokenVersion: 1
     });
 
@@ -75,6 +78,8 @@ describe('Auth & Platform Security Integration Suite', () => {
       role: ROLES.INSTITUTION_ADMIN,
       institutionId: instAId.toString(),
       isActive: true,
+      isActivated: true,
+      emailVerified: true,
       tokenVersion: 1
     });
 
@@ -85,6 +90,8 @@ describe('Auth & Platform Security Integration Suite', () => {
       role: ROLES.INSTITUTION_OPERATOR,
       institutionId: instAId.toString(),
       isActive: true,
+      isActivated: true,
+      emailVerified: true,
       tokenVersion: 1
     });
 
@@ -95,6 +102,8 @@ describe('Auth & Platform Security Integration Suite', () => {
       role: ROLES.AUTHORITY_OFFICER,
       assignedInstitutionIds: [instAId.toString()], // Scoped ONLY to Inst A
       isActive: true,
+      isActivated: true,
+      emailVerified: true,
       tokenVersion: 1
     });
 
@@ -104,6 +113,8 @@ describe('Auth & Platform Security Integration Suite', () => {
       name: 'Independent Auditor Roy',
       role: ROLES.AUDITOR,
       isActive: true,
+      isActivated: true,
+      emailVerified: true,
       tokenVersion: 1
     });
 
@@ -114,6 +125,8 @@ describe('Auth & Platform Security Integration Suite', () => {
       role: ROLES.INSTITUTION_OPERATOR,
       institutionId: instAId.toString(),
       isActive: false,
+      isActivated: true,
+      emailVerified: true,
       tokenVersion: 1
     });
   });
@@ -150,30 +163,56 @@ describe('Auth & Platform Security Integration Suite', () => {
   });
 
   describe('1. Credentials & Login Endpoint (POST /api/v1/auth/login)', () => {
-    it('1. Valid credentials authenticate successfully and set httpOnly cookie with safe user envelope', async () => {
-      const res = await request(app)
+    it('1. Valid credentials initiate MFA OTP challenge and verify-login-otp issues JWT and sets httpOnly cookie', async () => {
+      // Step A: Password authentication triggers OTP generation and email dispatch
+      const loginRes = await request(app)
         .post('/api/v1/auth/login')
         .send({
           email: institutionAdminUser.email,
           password: testPassword
         });
 
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.user).toBeDefined();
-      expect(res.body.data.user.email).toBe(institutionAdminUser.email);
-      expect(res.body.data.user.role).toBe(ROLES.INSTITUTION_ADMIN);
-      expect(res.body.data.user.institutionId).toBe(instAId.toString());
-      expect(Array.isArray(res.body.data.user.permissions)).toBe(true);
+      expect(loginRes.status).toBe(200);
+      expect(loginRes.body.success).toBe(true);
+      expect(loginRes.body.data.mfaRequired).toBe(true);
+      expect(loginRes.body.data.challengeId).toBeDefined();
+      expect(loginRes.body.data.maskedEmail).toBeDefined();
+      expect(loginRes.body.data.expiresAt).toBeDefined();
 
-      // Password hash must NEVER be exposed
-      expect(res.body.data.user.passwordHash).toBeUndefined();
+      // Ensure tokens are NOT issued in Step A
+      expect(loginRes.body.data.accessToken).toBeUndefined();
+      expect(loginRes.headers['set-cookie']).toBeUndefined();
+
+      // Retrieve test OTP from mock mail adapter
+      const otp = getLatestOtpForTesting(institutionAdminUser.email);
+      expect(otp).toBeDefined();
+      expect(otp).toMatch(/^\d{6}$/);
+
+      // Step B: OTP verification completes authentication
+      const verifyRes = await request(app)
+        .post('/api/v1/auth/verify-login-otp')
+        .send({
+          challengeId: loginRes.body.data.challengeId,
+          otp
+        });
+
+      expect(verifyRes.status).toBe(200);
+      expect(verifyRes.body.success).toBe(true);
+      expect(verifyRes.body.data.user).toBeDefined();
+      expect(verifyRes.body.data.user.email).toBe(institutionAdminUser.email);
+      expect(verifyRes.body.data.user.role).toBe(ROLES.INSTITUTION_ADMIN);
+      expect(verifyRes.body.data.user.institutionId).toBe(instAId.toString());
+      expect(Array.isArray(verifyRes.body.data.user.permissions)).toBe(true);
+
+      // Password hash and tokens must NEVER be exposed in user object
+      expect(verifyRes.body.data.user.passwordHash).toBeUndefined();
+      expect(verifyRes.body.data.user.activationTokenHash).toBeUndefined();
 
       // Access token returned
-      expect(typeof res.body.data.accessToken).toBe('string');
+      expect(typeof verifyRes.body.data.accessToken).toBe('string');
 
       // Refresh token cookie configured safely
-      const cookies = res.headers['set-cookie'];
+      const cookies = verifyRes.headers['set-cookie'];
       expect(cookies).toBeDefined();
       const cookieStr = Array.isArray(cookies) ? cookies.join('; ') : cookies;
       expect(cookieStr).toContain('refreshToken=');
@@ -254,7 +293,9 @@ describe('Auth & Platform Security Integration Suite', () => {
         name: 'Lockout Target User',
         role: ROLES.INSTITUTION_OPERATOR,
         institutionId: instAId.toString(),
-        isActive: true
+        isActive: true,
+        isActivated: true,
+        emailVerified: true
       });
 
       // Execute 5 consecutive failed attempts
@@ -339,9 +380,17 @@ describe('Auth & Platform Security Integration Suite', () => {
           password: testPassword
         });
 
-      const cookies = loginRes.headers['set-cookie'];
+      const otp = getLatestOtpForTesting(institutionAdminUser.email);
+      const verifyRes = await request(app)
+        .post('/api/v1/auth/verify-login-otp')
+        .send({
+          challengeId: loginRes.body.data.challengeId,
+          otp
+        });
+
+      const cookies = verifyRes.headers['set-cookie'];
       authCookie = Array.isArray(cookies) ? cookies[0] : cookies;
-      const match = authCookie.match(/refreshToken=([^;]+)/);
+      const match = authCookie ? authCookie.match(/refreshToken=([^;]+)/) : null;
       activeRefreshToken = match ? match[1] : null;
     });
 
@@ -408,7 +457,15 @@ describe('Auth & Platform Security Integration Suite', () => {
           password: testPassword
         });
 
-      const cookies = loginRes.headers['set-cookie'];
+      const otp = getLatestOtpForTesting(institutionAdminUser.email);
+      const verifyRes = await request(app)
+        .post('/api/v1/auth/verify-login-otp')
+        .send({
+          challengeId: loginRes.body.data.challengeId,
+          otp
+        });
+
+      const cookies = verifyRes.headers['set-cookie'];
       const cookieStr = Array.isArray(cookies) ? cookies[0] : cookies;
       const match = cookieStr.match(/refreshToken=([^;]+)/);
       const token = match ? match[1] : null;
@@ -438,6 +495,8 @@ describe('Auth & Platform Security Integration Suite', () => {
         role: ROLES.INSTITUTION_OPERATOR,
         institutionId: instAId.toString(),
         isActive: true,
+        isActivated: true,
+        emailVerified: true,
         tokenVersion: 1
       });
 
@@ -473,6 +532,18 @@ describe('Auth & Platform Security Integration Suite', () => {
         });
 
       expect(newLoginRes.status).toBe(200);
+      expect(newLoginRes.body.data.mfaRequired).toBe(true);
+
+      const newOtp = getLatestOtpForTesting(user.email);
+      const newVerifyRes = await request(app)
+        .post('/api/v1/auth/verify-login-otp')
+        .send({
+          challengeId: newLoginRes.body.data.challengeId,
+          otp: newOtp
+        });
+
+      expect(newVerifyRes.status).toBe(200);
+      expect(newVerifyRes.body.data.accessToken).toBeDefined();
 
       // Cleanup
       await User.deleteOne({ _id: user._id });

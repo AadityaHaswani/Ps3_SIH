@@ -463,6 +463,9 @@ async function seedDemoData(options = {}) {
         existingUser.institutionId = uDef.institutionId;
         existingUser.assignedInstitutionIds = uDef.assignedInstitutionIds;
         existingUser.isActive = true;
+        existingUser.isActivated = true;
+        existingUser.emailVerified = true;
+        existingUser.activatedAt = existingUser.activatedAt || new Date();
         existingUser.isDemoUser = true;
         existingUser.dataMode = 'DEMO';
         await existingUser.save();
@@ -476,6 +479,9 @@ async function seedDemoData(options = {}) {
           institutionId: uDef.institutionId,
           assignedInstitutionIds: uDef.assignedInstitutionIds,
           isActive: true,
+          isActivated: true,
+          emailVerified: true,
+          activatedAt: new Date(),
           isDemoUser: true,
           dataMode: 'DEMO',
           tokenVersion: 0
@@ -1008,9 +1014,11 @@ async function seedDemoData(options = {}) {
     const storedV2Rows = await RosterRow.find({ rosterVersionId: sit1Version2._id }).lean();
 
     // Plant P2: 3 synthetic students absent from mock admission register
-    const p2OmittedAppNos = [storedV2Rows[0].applicationNo, storedV2Rows[1].applicationNo, storedV2Rows[2].applicationNo];
+    const p2OmittedAppNos = storedV2Rows && storedV2Rows.length >= 3
+      ? [storedV2Rows[0].applicationNo, storedV2Rows[1].applicationNo, storedV2Rows[2].applicationNo]
+      : [];
     // Plant P12: Omit row 10 from direct K1/K2 match so it matches solely on K3 via ADM-WEAK-CANDIDATE-P12
-    const p12OmittedAppNo = storedV2Rows[10] ? storedV2Rows[10].applicationNo : null;
+    const p12OmittedAppNo = storedV2Rows && storedV2Rows.length > 10 ? storedV2Rows[10].applicationNo : null;
 
     const admissionRegisterDocs = [];
     const examRegisterDocs = [];

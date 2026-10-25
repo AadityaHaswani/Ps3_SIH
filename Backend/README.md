@@ -1049,8 +1049,9 @@ node src/scripts/bootstrapAdmin.js
 
 ### 6. Authentication & User Management API Contracts
 
-#### A. Login
+#### A. Step 1: Password Validation & OTP Challenge Dispatch
 `POST /api/v1/auth/login`
+- **Rate Limit:** 10 attempts per 15 minutes per IP.
 - **Request Body:**
   ```json
   {
@@ -1059,7 +1060,34 @@ node src/scripts/bootstrapAdmin.js
   }
   ```
 - **Response (200 OK):**
-  - Sets `refreshToken` in `httpOnly` cookie.
+  - **Crucial Security Property:** Does NOT issue access tokens or set refresh cookies.
+  - Body:
+    ```json
+    {
+      "success": true,
+      "data": {
+        "mfaRequired": true,
+        "challengeId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+        "expiresAt": "2026-10-25T18:00:00.000Z",
+        "maskedEmail": "a***n@institution.edu",
+        "message": "Verification OTP sent to your registered email address."
+      }
+    }
+    ```
+
+#### B. Step 2: Verify Login OTP & Session Establishment
+`POST /api/v1/auth/verify-login-otp`
+- **Rate Limit:** 15 attempts per 15 minutes per IP.
+- **Request Body:**
+  ```json
+  {
+    "challengeId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "otp": "491823"
+  }
+  ```
+- **Response (200 OK):**
+  - Atomically consumes the single-use OTP challenge (prevents replay/race conditions).
+  - Sets `refreshToken` in `httpOnly`, `SameSite=Strict`, `secure` cookie.
   - Body:
     ```json
     {
@@ -1079,30 +1107,68 @@ node src/scripts/bootstrapAdmin.js
     }
     ```
 
-#### B. Refresh Token Rotation
+#### C. Resend Login OTP
+`POST /api/v1/auth/resend-login-otp`
+- **Rate Limit:** 5 requests per 15 minutes per IP.
+- **Request Body:**
+  ```json
+  {
+    "challengeId": "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+  }
+  ```
+- Generates a fresh 6-digit OTP, updates challenge hash, and resets remaining attempts.
+
+#### D. Account Creation & Activation Lifecycle
+1. **Administrator Creates User:**
+   `POST /api/v1/users` (Restricted to `PLATFORM_ADMIN`)
+   - Validates role, institutional assignments, and uniqueness.
+   - Creates user with `isActivated: false`, `emailVerified: false`.
+   - Generates single-use cryptographically random token (stored only as SHA-256 hash).
+   - Sends branded activation email containing unique URL: `${APP_BASE_URL}/activate?token=${rawToken}`.
+2. **User Activates Account & Sets Password:**
+   `POST /api/v1/auth/activate-account` (Public endpoint)
+   - **Request Body:**
+     ```json
+     {
+       "token": "4a1f8b2c9d...",
+       "password": "SecurePassword123!"
+     }
+     ```
+   - Validates token hash and expiration.
+   - Enforces password strength (min 8 characters).
+   - Hashes password via scrypt with cryptographically random salt.
+   - Atomically updates user to `isActivated: true`, `emailVerified: true`, clears activation token hash, and logs canonical audit event.
+   - Unactivated accounts are strictly rejected from logging in with `ACCOUNT_NOT_ACTIVATED`.
+
+#### E. Resend Activation Email
+`POST /api/v1/users/:id/resend-activation` (Restricted to `PLATFORM_ADMIN`)
+- Invalidates any prior token, generates a fresh single-use activation token, and dispatches a new activation email.
+
+#### F. Refresh Token Rotation
 `POST /api/v1/auth/refresh`
 - **Cookie:** `refreshToken=<token>`
-- **Response (200 OK):** Rotates `refreshToken` cookie and returns fresh `accessToken`.
+- **Response (200 OK):** Rotates `refreshToken` cookie and returns fresh `accessToken`. Automatic family revocation on detected reuse.
 
-#### C. Logout
+#### G. Logout
 `POST /api/v1/auth/logout`
 - Revokes the refresh session family, clears cookie, and logs audit event.
 
-#### D. Current User Identity & Permissions
+#### H. Current User Identity & Permissions
 `GET /api/v1/auth/me`
 - **Headers:** `Authorization: Bearer <accessToken>`
 - **Response (200 OK):** Returns current database-verified identity, institution scope, and permissions list.
 
-#### E. Change Password
+#### I. Change Password
 `POST /api/v1/auth/change-password`
 - **Headers:** `Authorization: Bearer <accessToken>`
 - **Body:** `{ "currentPassword": "OldPassword123!", "newPassword": "NewPassword456!" }`
 - Updates scrypt hash, increments `tokenVersion`, revokes active refresh tokens, and requires fresh login.
 
-#### F. User Management (Platform Admin Only)
+#### J. User Management (Platform Admin Only)
 - `GET /api/v1/users`: List users with role/institution filtering.
-- `POST /api/v1/users`: Create user account with server-side role validation.
+- `POST /api/v1/users`: Create user account in pending activation state.
 - `PATCH /api/v1/users/:id`: Update role, status, or assignment scope (protected against sole admin demotion).
+- `POST /api/v1/users/:id/resend-activation`: Issue fresh activation token for pending account.
 
 ---
 
@@ -1254,32 +1320,210 @@ npm.cmd test -- tests/seed.test.js
 
 ---
 
-## Running the Platform (Windows Commands)
+## Prompt 11: Email Authentication, Security Audit & Complete Platform Testing
 
-Install dependencies:
+### 1. Email Service & Resend Integration
+
+The platform integrates transactional email delivery using the official `resend` Node.js SDK, supporting branded, responsive HTML and plain-text activation and login OTP emails.
+
+#### A. Environment Configuration
+Add the following variables to `.env` (sanitized placeholders in `.env.example`):
+```text
+# Transactional Email (Resend)
+RESEND_API_KEY=re_your_api_key_here
+MAIL_FROM="SIH AICTE Platform <notifications@yourverifieddomain.gov.in>"
+APP_BASE_URL="http://localhost:5173"
+
+# Authentication Expiry & Attempt Limits
+ACTIVATION_TOKEN_EXPIRY_MINUTES=1440   # 24 hours
+OTP_EXPIRY_MINUTES=10                  # 10 minutes
+OTP_MAX_ATTEMPTS=5                     # Max wrong OTP attempts per challenge
+
+# Ed25519 Seal Digital Signatures (Production requirement)
+SEAL_SIGNING_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+SEAL_SIGNING_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+```
+
+#### B. Development & Test Mock Mail Adapter
+- In development/test environments (`NODE_ENV !== 'production'`), if `RESEND_API_KEY` is omitted or unverified, the email service automatically routes emails into an **in-memory testing mailbox**.
+- The in-memory mailbox captures recipient, subject, token, and OTP without contacting external servers or leaking details over HTTP APIs.
+- Dedicated inspection helpers (`getLatestOtpForTesting()`, `getLatestActivationTokenForTesting()`, `getTestMailbox()`) allow integration tests to reliably verify authentication flows.
+- **Production Guard:** In `production` (`NODE_ENV === 'production'`), test mailbox inspection helpers strictly return `null` or `[]`. Missing or invalid `RESEND_API_KEY` triggers an immediate `SECURITY_ERROR: Email delivery service is unavailable. Production requires a configured RESEND_API_KEY.`. **The system NEVER bypasses OTP or falls back to password-only login.**
+
+---
+
+### 2. Account Creation & Activation Flow
+
+User creation is restricted to authorized `PLATFORM_ADMIN` users (public registration is prohibited):
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Admin as Platform Admin
+    actor User as New User
+    participant API as Backend API
+    participant DB as MongoDB Atlas
+    participant Mail as Resend / Mail Service
+
+    Admin->>API: POST /api/v1/users (role, email, institution)
+    API->>API: Validate role & tenant assignment
+    API->>API: Generate crypto-random activation token (32 bytes)
+    API->>DB: Save user (isActivated=false, activationTokenHash=SHA256, expiresAt=+24h)
+    API->>Mail: sendActivationEmail(email, token, activationUrl)
+    Mail-->>User: Delivery: "Activate Your Account"
+    User->>API: POST /api/v1/auth/activate-account (token, password)
+    API->>API: Verify token hash & expiry
+    API->>API: Hash password (scrypt + random salt)
+    API->>DB: Update user (isActivated=true, emailVerified=true, clear token)
+    API->>DB: Append canonical audit event (USER_ACTIVATED)
+    API-->>User: 200 OK (Account activated successfully)
+```
+
+**Security Controls:**
+- Only the SHA-256 hash of activation tokens is stored in the database.
+- Raw activation tokens are never returned in API responses or written to audit logs.
+- Single-use: once consumed, the token hash and expiry are atomically erased.
+- Unactivated accounts cannot authenticate; `POST /api/v1/auth/login` rejects them with HTTP 403 `ACCOUNT_NOT_ACTIVATED`.
+
+---
+
+### 3. Two-Step Email OTP Login Specification
+
+Authentication enforces mandatory two-factor verification for all roles:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as Web Frontend / Client
+    participant API as Auth Controller
+    participant DB as MongoDB (User, OTP Challenges)
+    participant Mail as Resend / Mail Service
+
+    Client->>API: POST /api/v1/auth/login (email, password)
+    API->>DB: Fetch user (check lockout, status, isActivated)
+    API->>API: Verify password via scrypt (timing-safe)
+    API->>API: Generate 6-digit OTP & UUID challengeId
+    API->>DB: Create LoginOtpChallenge (challengeId, otpHash=SHA256, maxAttempts=5, TTL index)
+    API->>Mail: sendLoginOtpEmail(email, otp)
+    API-->>Client: 200 OK { mfaRequired: true, challengeId, expiresAt, maskedEmail }
+    Note over Client,API: NO JWT tokens or cookies issued yet!
+
+    Client->>API: POST /api/v1/auth/verify-login-otp (challengeId, otp)
+    API->>DB: Find challenge (atomic concurrency check)
+    API->>API: Verify OTP timing-safe (crypto.timingSafeEqual)
+    API->>DB: Mark challenge consumed (isConsumed=true, consumedAt=now)
+    API->>DB: Create RefreshToken session family
+    API->>Client: 200 OK (Sets httpOnly refreshToken cookie + returns short-lived accessToken)
+```
+
+**Security Safeguards:**
+- **Zero Token Leakage:** Step A strictly issues zero access tokens and sets zero cookies.
+- **Atomic Challenge Consumption:** `findOneAndUpdate` with `{ isConsumed: false }` guarantees concurrent verification requests cannot consume the same challenge twice.
+- **Attempt Limiting:** Maximum 5 attempts. Exceeding the limit immediately invalidates the challenge with HTTP 400 `OTP_MAX_ATTEMPTS_EXCEEDED`.
+- **Timing-Attack Resistance:** OTP comparison uses `crypto.timingSafeEqual` over SHA-256 digests.
+- **Rate Limiting:** Login (10 req/15 min), OTP verification (15 req/15 min), and Resend (5 req/15 min) endpoints are protected against brute-force attacks.
+- **Account Enumeration Defense:** Generic error messages prevent attackers from discovering valid user accounts.
+
+---
+
+### 4. Cryptographic Key Management & Ed25519 Production Guardrails
+
+The platform maintains strict separation of cryptographic domains:
+1. **Student Token HMAC:** `STUDENT_HMAC_SECRET` (Keyed HMAC-SHA256 pseudonymisation).
+2. **Access JWTs:** `JWT_ACCESS_SECRET` (Short-lived 15-minute bearer tokens).
+3. **Refresh Tokens:** `JWT_REFRESH_SECRET` (Rotating 7-day httpOnly session tokens).
+4. **Digital Seals (Feature 7):** Asymmetric Ed25519 signing keypair (`SEAL_SIGNING_PRIVATE_KEY` / `SEAL_SIGNING_PUBLIC_KEY`).
+
+**Production Key Guardrails:**
+- In development/test, deterministic fallback keys allow reproducible testing.
+- In `production` (`NODE_ENV === 'production'`), `src/utils/sealCrypto.js` explicitly forbids fallback keys, throwing:
+  `SECURITY_ERROR: Production environment requires explicitly configured SEAL_SIGNING_PRIVATE_KEY and SEAL_SIGNING_PUBLIC_KEY. Fallback development keys are strictly forbidden.`
+- Digital signatures bind the canonical anchor metadata (roster version, Merkle root, row count, previous anchor hash, algorithm, and ISO-8601 timestamp), ensuring tamper-evident provenance.
+
+---
+
+### 5. Running the Platform (Windows Commands)
+
+#### Install Dependencies
 ```powershell
 npm.cmd install
 ```
 
-Start in development mode with Nodemon:
+#### Start in Development Mode (Nodemon Hot-Reload)
 ```powershell
 npm.cmd run dev
 ```
 
-Start the production server:
+#### Run the Synthetic Demo Seeder & Verifier
 ```powershell
-npm.cmd start
+# Populate synthetic demo dataset across 6 institutions (idempotent)
+npm.cmd run seed:demo
+
+# Clean rebuild of synthetic demo records
+node src/scripts/seedDemoData.js --clean
+
+# Verify demo dataset health, P1-P15 scenarios, foreign references, and Merkle seals
+npm.cmd run seed:demo:verify
+
+# Opt-in cryptographic tampering demonstration (P10)
+npm.cmd run demo:tamper
+npm.cmd run seed:demo:verify
+npm.cmd run demo:restore
+npm.cmd run seed:demo:verify
 ```
 
-Run complete test suite:
+#### Run Comprehensive Test Suite
 ```powershell
-npm.cmd test
+# Run all test suites in band
+npm.cmd test -- --runInBand --forceExit
+
+# Run with test coverage report
+npm.cmd run test:coverage -- --runInBand --forceExit
 ```
 
-Run test suite with code coverage:
-```powershell
-npm.cmd run test:coverage
+---
+
+### 6. Full Test Suite & Coverage Metrics
+
+```text
+=============================== TEST SUMMARY ===============================
+Test Suites: 24 passed, 24 total
+Tests:       333 passed, 333 total
+Snapshots:   0 total
+Duration:    225.093 s
+
+----------------------------------|---------|----------|---------|---------|
+File                              | % Stmts | % Branch | % Funcs | % Lines |
+----------------------------------|---------|----------|---------|---------|
+All files                         |   76.54 |    59.68 |   84.29 |   77.02 |
+ src                              |   94.11 |       50 |      75 |   93.93 |
+ src/config                       |   82.69 |    80.30 |   76.47 |   85.56 |
+ src/controllers                  |   62.47 |    48.09 |   77.27 |   63.03 |
+ src/middleware                   |   85.18 |    69.49 |   85.71 |   87.05 |
+ src/models                       |   94.52 |    55.22 |   81.81 |   95.17 |
+ src/scripts                      |   67.93 |    51.04 |   77.50 |   66.75 |
+ src/services                     |   78.28 |    61.60 |   86.98 |   78.94 |
+ src/services/connectors          |   64.93 |    25.78 |   72.00 |   67.11 |
+ src/services/scorecard           |   85.29 |    70.08 |   87.50 |   86.72 |
+ src/utils                        |   91.66 |    71.20 |  100.00 |   93.16 |
+----------------------------------|---------|----------|---------|---------|
 ```
 
+---
 
+### 7. Remaining Deployment & Infrastructure Security Requirements
 
+The following requirements must be enforced at the infrastructure/orchestration layer prior to production go-live:
+
+1. **TLS / HTTPS Termination:**
+   - Production reverse proxy (e.g. NGINX, AWS ALB, Cloudflare) must enforce TLS 1.3 with HSTS headers (`Strict-Transport-Security`).
+   - Cookies (`refreshToken`) are configured with `secure: true`, requiring HTTPS to be transmitted by browsers.
+2. **Strict CORS Whitelisting:**
+   - `CORS_ORIGIN` must point strictly to verified, trusted production domains (e.g. `https://seat-integrity.aicte.gov.in`).
+   - Wildcards (`*`) or multi-origin reflections are strictly blocked by `src/app.js`.
+3. **Resend Domain Verification:**
+   - In production, `MAIL_FROM` must use a sender domain with verified SPF, DKIM, and DMARC records configured in the Resend dashboard to ensure inbox delivery and prevent spoofing.
+4. **Hardware Security Module (HSM) / Key Vault:**
+   - Ed25519 private signing keys (`SEAL_SIGNING_PRIVATE_KEY`) should be loaded from secure secret managers (e.g. AWS Secrets Manager, HashiCorp Vault) rather than static filesystem files.
+5. **Least-Privilege Database Permissions:**
+   - Production MongoDB connection URI should use a dedicated application user restricted to CRUD operations on the `sih` database, without `dbAdmin` or `atlasAdmin` roles.

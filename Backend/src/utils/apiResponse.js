@@ -13,7 +13,7 @@ function sendSuccess(res, data = {}, statusCode = 200, meta = null) {
   return res.status(statusCode).json(response);
 }
 
-function sendError(res, code, message, statusCode = 400, details = []) {
+function sendError(res, code, message, statusCode = 400, details = null) {
   const response = {
     success: false,
     error: {
@@ -22,8 +22,12 @@ function sendError(res, code, message, statusCode = 400, details = []) {
     },
     requestId: res.req ? res.req.id : null
   };
-  if (Array.isArray(details) && details.length > 0) {
-    response.error.details = details;
+  if (details) {
+    if (Array.isArray(details) && details.length > 0) {
+      response.error.details = details;
+    } else if (typeof details === 'object' && Object.keys(details).length > 0) {
+      response.error.details = details;
+    }
   }
   return res.status(statusCode).json(response);
 }

@@ -263,6 +263,7 @@ describe('Feature 1: Seat Three-Way Match Integration Suite', () => {
       const res = await request(app)
         .post('/api/v1/reconciliations')
         .set('x-user-role', 'AUTHORITY_OFFICER')
+        .set('x-user-assigned', institutionId.toString())
         .set('Idempotency-Key', idempotencyKey)
         .send({
           institutionId: institutionId.toString(),
@@ -289,6 +290,7 @@ describe('Feature 1: Seat Three-Way Match Integration Suite', () => {
       const replayRes = await request(app)
         .post('/api/v1/reconciliations')
         .set('x-user-role', 'AUTHORITY_OFFICER')
+        .set('x-user-assigned', institutionId.toString())
         .set('Idempotency-Key', idempotencyKey)
         .send({
           institutionId: institutionId.toString(),
@@ -306,7 +308,8 @@ describe('Feature 1: Seat Three-Way Match Integration Suite', () => {
     test('should retrieve paginated findings with filter for CONFLICT', async () => {
       const res = await request(app)
         .get(`/api/v1/reconciliations/${testRunId}/findings?type=CONFLICT`)
-        .set('x-user-role', 'AUTHORITY_OFFICER');
+        .set('x-user-role', 'AUTHORITY_OFFICER')
+        .set('x-user-assigned', institutionId.toString());
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -320,7 +323,8 @@ describe('Feature 1: Seat Three-Way Match Integration Suite', () => {
     test('should retrieve findings filtered by CANDIDATE_REVIEW and verify weak confidence', async () => {
       const res = await request(app)
         .get(`/api/v1/reconciliations/${testRunId}/findings?type=CANDIDATE_REVIEW`)
-        .set('x-user-role', 'AUTHORITY_OFFICER');
+        .set('x-user-role', 'AUTHORITY_OFFICER')
+        .set('x-user-assigned', institutionId.toString());
 
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveLength(1);
@@ -331,7 +335,8 @@ describe('Feature 1: Seat Three-Way Match Integration Suite', () => {
     test('should retrieve COUNT_MISMATCH finding reflecting intake capacity overflow', async () => {
       const res = await request(app)
         .get(`/api/v1/reconciliations/${testRunId}/findings?type=COUNT_MISMATCH`)
-        .set('x-user-role', 'AUTHORITY_OFFICER');
+        .set('x-user-role', 'AUTHORITY_OFFICER')
+        .set('x-user-assigned', institutionId.toString());
 
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveLength(1);
@@ -345,7 +350,8 @@ describe('Feature 1: Seat Three-Way Match Integration Suite', () => {
     test('should return chart-ready summary metrics', async () => {
       const res = await request(app)
         .get(`/api/v1/reconciliations/${testRunId}/summary`)
-        .set('x-user-role', 'AUTHORITY_OFFICER');
+        .set('x-user-role', 'AUTHORITY_OFFICER')
+        .set('x-user-assigned', institutionId.toString());
 
       expect(res.status).toBe(200);
       expect(res.body.data.metrics.reconciliationRatePct).toBe(25); // 1 of 4 confirmed 3-way
@@ -367,6 +373,7 @@ describe('Feature 1: Seat Three-Way Match Integration Suite', () => {
       const confirmRes = await request(app)
         .patch(`/api/v1/reconciliation-findings/${candidateFinding._id}/review`)
         .set('x-user-role', 'AUTHORITY_OFFICER')
+        .set('x-user-assigned', institutionId.toString())
         .send({
           action: 'CONFIRM',
           note: 'Confirmed candidate identity through verified enrollment records.'
@@ -386,6 +393,7 @@ describe('Feature 1: Seat Three-Way Match Integration Suite', () => {
       const clarifyRes = await request(app)
         .patch(`/api/v1/reconciliation-findings/${unmatchedFinding._id}/review`)
         .set('x-user-role', 'AUTHORITY_OFFICER')
+        .set('x-user-assigned', institutionId.toString())
         .send({
           action: 'REQUEST_CLARIFICATION',
           note: 'Requested spot admission allotment certificate from institution admin.'
@@ -399,6 +407,7 @@ describe('Feature 1: Seat Three-Way Match Integration Suite', () => {
       const resolveRes = await request(app)
         .patch(`/api/v1/reconciliation-findings/${unmatchedFinding._id}/review`)
         .set('x-user-role', 'AUTHORITY_OFFICER')
+        .set('x-user-assigned', institutionId.toString())
         .send({
           action: 'RESOLVE',
           note: 'Allotment order verified via State CET portal spot-round report.'
@@ -417,6 +426,7 @@ describe('Feature 1: Seat Three-Way Match Integration Suite', () => {
       const outageRes = await request(app)
         .post('/api/v1/reconciliations')
         .set('x-user-role', 'AUTHORITY_OFFICER')
+        .set('x-user-assigned', institutionId.toString())
         .send({
           institutionId: institutionId.toString(),
           academicYear,
