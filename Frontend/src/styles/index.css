@@ -1,0 +1,150 @@
+@import '@fontsource-variable/inter';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Refined Government-Tech Palette (Light Mode Default) */
+    --background: 210 20% 98%;       /* Soft slate tint #F8FAFC */
+    --foreground: 222 47% 11%;       /* Deep slate ink #0F172A */
+
+    --card: 0 0% 100%;               /* Crisp pure white */
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Deep Indigo / Authority Ink */
+    --primary: 224 76% 48%;          /* #1D4ED8 / #2563EB */
+    --primary-foreground: 210 40% 98%;
+    --primary-hover: 224 76% 40%;
+
+    --secondary: 215 25% 93%;        /* Slate muted accent #E2E8F0 */
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 215 20% 95%;            /* Subtle background wash */
+    --muted-foreground: 215 16% 47%; /* Slate 500 #64748B */
+
+    --accent: 215 25% 93%;
+    --accent-foreground: 222 47% 11%;
+
+    /* Semantic States */
+    /* Success / Verified / Healthy Teal */
+    --success: 160 84% 39%;          /* #0D9488 */
+    --success-foreground: 0 0% 100%;
+    --success-soft: 152 76% 96%;
+
+    /* Warning / Alert Amber */
+    --warning: 38 92% 50%;           /* #F59E0B */
+    --warning-foreground: 38 92% 15%;
+    --warning-soft: 48 96% 96%;
+
+    /* Danger / Critical Rose */
+    --danger: 350 89% 60%;           /* #F43F5E */
+    --danger-foreground: 0 0% 100%;
+    --danger-soft: 355 100% 97%;
+
+    /* Info / Guidance Sky */
+    --info: 199 89% 48%;             /* #0EA5E9 */
+    --info-foreground: 0 0% 100%;
+    --info-soft: 204 100% 97%;
+
+    /* Simulated / Mock Purple Badge */
+    --simulated: 271 81% 56%;        /* #9333EA */
+    --simulated-foreground: 0 0% 100%;
+    --simulated-soft: 270 100% 97%;
+
+    --border: 214 32% 91%;           /* Slate 200 #E2E8F0 */
+    --input: 214 32% 91%;
+    --ring: 224 76% 48%;
+
+    --radius: 0.75rem;               /* 12px rounded-xl */
+  }
+
+  .dark {
+    /* Sleek Regulatory Dark Mode */
+    --background: 222 47% 7%;        /* Deep void ink #090D16 */
+    --foreground: 210 40% 96%;       /* Crisp pale slate #F1F5F9 */
+
+    --card: 223 39% 10%;             /* Rich elevated dark card #0F172A */
+    --card-foreground: 210 40% 96%;
+
+    --popover: 223 39% 10%;
+    --popover-foreground: 210 40% 96%;
+
+    --primary: 217 91% 60%;          /* Vibrant sapphire in dark mode */
+    --primary-foreground: 222 47% 7%;
+    --primary-hover: 217 91% 68%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 96%;
+
+    --muted: 217 33% 14%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 96%;
+
+    --success: 160 84% 45%;
+    --success-foreground: 0 0% 100%;
+    --success-soft: 160 84% 12%;
+
+    --warning: 38 92% 55%;
+    --warning-foreground: 38 92% 10%;
+    --warning-soft: 38 92% 14%;
+
+    --danger: 350 89% 65%;
+    --danger-foreground: 0 0% 100%;
+    --danger-soft: 350 89% 14%;
+
+    --info: 199 89% 55%;
+    --info-foreground: 0 0% 100%;
+    --info-soft: 199 89% 14%;
+
+    --simulated: 271 81% 65%;
+    --simulated-foreground: 0 0% 100%;
+    --simulated-soft: 271 81% 14%;
+
+    --border: 217 33% 18%;
+    --input: 217 33% 18%;
+    --ring: 217 91% 60%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased font-sans;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /* Accessible Tabular Numbers for figures, metrics, percentages */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+
+/* High-contrast focus rings */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}

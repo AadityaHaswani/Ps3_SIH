@@ -1,0 +1,40 @@
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules/
+Frontend/node_modules/
+Backend/node_modules/
+
+# Build outputs
+Frontend/dist/
+dist/
+build/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.*
+!.env.example
+Frontend/.env
+Frontend/.env.*
+!Frontend/.env.example
+Backend/.env
+Backend/.env.*
+!Backend/.env.example
+
+# Testing & Coverage
+coverage/
+.nyc_output/
+*.lcov

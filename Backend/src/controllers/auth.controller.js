@@ -186,13 +186,20 @@ async function handleLogin(req, res, next) {
       details: { challengeId, expiresAt }
     });
 
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`\n==============================================`);
+      console.log(`[AUTH-DEV] 🔑 Login OTP for ${user.email}: ${otp}`);
+      console.log(`==============================================\n`);
+    }
+
     return sendSuccess(
       res,
       {
         mfaRequired: true,
         challengeId,
         expiresAt,
-        maskedEmail: maskEmail(user.email)
+        maskedEmail: maskEmail(user.email),
+        devOtp: process.env.NODE_ENV !== 'production' ? otp : undefined
       },
       200
     );
@@ -386,12 +393,19 @@ async function handleResendLoginOtp(req, res, next) {
       details: { challengeId, email: user.email }
     });
 
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`\n==============================================`);
+      console.log(`[AUTH-DEV] 🔑 Resent Login OTP for ${user.email}: ${otp}`);
+      console.log(`==============================================\n`);
+    }
+
     return sendSuccess(
       res,
       {
         challengeId: challenge.challengeId,
         expiresAt: challenge.expiresAt,
-        maskedEmail: maskEmail(user.email)
+        maskedEmail: maskEmail(user.email),
+        devOtp: process.env.NODE_ENV !== 'production' ? otp : undefined
       },
       200
     );

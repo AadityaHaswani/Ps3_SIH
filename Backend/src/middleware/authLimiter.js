@@ -7,7 +7,7 @@ const rateLimit = require('express-rate-limit');
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 15, // 15 attempts per 15 minutes
+  max: process.env.NODE_ENV === 'development' ? 1000 : 15,
   standardHeaders: true,
   legacyHeaders: false,
   skip: () => process.env.NODE_ENV === 'test',
