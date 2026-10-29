@@ -16,7 +16,7 @@ let server = null;
 async function startServer() {
   try {
     console.log('====================================================');
-    console.log(' SIH 2026 PS3 APAAR Seat Integrity Platform');
+    console.log(' SeatSeal — Every Seat Is Seal');
     console.log(` Environment: ${config.nodeEnv} | Port: ${config.port}`);
     console.log('====================================================');
 

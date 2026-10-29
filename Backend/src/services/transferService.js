@@ -631,6 +631,8 @@ async function syncTransferToLedger(transferCase, user) {
   transferCase.ledgerEntries = createdEntries;
 }
 
+const { resolveInstitutionId } = require('../utils/institutionResolver');
+
 /**
  * Lists transfer cases subject to institution scoping.
  */
@@ -639,13 +641,22 @@ async function listTransferCases(filter = {}, { page = 1, limit = 25 }, user) {
   const l = Math.min(100, Math.max(1, parseInt(limit, 10)));
   const skip = (p - 1) * l;
 
-  const query = { ...filter };
+  const query = {};
+  if (filter.status) query.status = filter.status;
+  if (filter.academicYear) query.academicYear = filter.academicYear;
+  if (filter.programmeCode) query.programmeCode = filter.programmeCode;
 
   // Institution scoping: caller can only see cases where they are sender or receiver
   const isInstitutionUser = user && user.role && user.role.startsWith('INSTITUTION_');
   if (isInstitutionUser && user.institutionId) {
     const instId = new mongoose.Types.ObjectId(user.institutionId);
     query.$or = [{ sendingInstitutionId: instId }, { receivingInstitutionId: instId }];
+  } else if (filter.institutionId) {
+    const resolvedId = (await resolveInstitutionId(filter.institutionId)) || filter.institutionId;
+    if (mongoose.Types.ObjectId.isValid(resolvedId)) {
+      const instObjId = new mongoose.Types.ObjectId(resolvedId);
+      query.$or = [{ sendingInstitutionId: instObjId }, { receivingInstitutionId: instObjId }];
+    }
   }
 
   const [items, total] = await Promise.all([

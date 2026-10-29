@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../auth';
 import { usePermission } from '../../auth/usePermission';
+import { useInstitutions } from '../../hooks/useInstitutions';
 import { rosterApi } from '../../api/modules/roster.api';
 import { queryKeys } from '../../api/queryKeys';
 import type { RosterVersion } from '../../types/models';
@@ -30,7 +31,8 @@ import { toast } from 'sonner';
 
 export const RostersPage: React.FC = () => {
   const { user } = useAuth();
-  const institutionId = user?.institutionId || 'SIT-DEMO-01';
+  const { selectedInstitutionId } = useInstitutions();
+  const institutionId = user?.institutionId ? String(user.institutionId) : (selectedInstitutionId || 'SIT-DEMO-01');
 
   // Permissions
   const canUpload = usePermission('rosters:upload');

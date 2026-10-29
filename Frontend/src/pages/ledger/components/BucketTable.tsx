@@ -70,7 +70,7 @@ export const BucketTable: React.FC<BucketTableProps> = ({
 
   if (isLoading) {
     return (
-      <div className="py-16 text-center text-xs text-slate-400 border border-slate-800 rounded-xl bg-slate-900/40">
+      <div className="py-16 text-center text-xs text-muted-foreground border border-border rounded-xl bg-card">
         Loading seat balance buckets...
       </div>
     );
@@ -78,17 +78,17 @@ export const BucketTable: React.FC<BucketTableProps> = ({
 
   if (buckets.length === 0) {
     return (
-      <div className="py-16 text-center text-xs text-slate-400 border border-slate-800 rounded-xl bg-slate-900/40 space-y-2">
-        <p className="text-sm font-medium text-slate-300">No seat balance buckets found matching the selected filters.</p>
-        <p className="text-slate-500">Try adjusting your programme code, academic year, or status filter.</p>
+      <div className="py-16 text-center text-xs text-muted-foreground border border-border rounded-xl bg-card space-y-2">
+        <p className="text-sm font-medium text-foreground">No seat balance buckets found matching the selected filters.</p>
+        <p className="text-muted-foreground">Try adjusting your programme code, academic year, or status filter.</p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto border border-slate-800 rounded-xl bg-slate-900/50 shadow-sm">
+    <div className="overflow-x-auto border border-border rounded-xl bg-card shadow-sm">
       <table className="w-full text-left text-xs">
-        <thead className="bg-slate-900/90 text-slate-400 border-b border-slate-800 font-medium">
+        <thead className="bg-muted/70 text-muted-foreground border-b border-border font-medium">
           <tr>
             <th className="p-3">Bucket / Cohort</th>
             <th className="p-3">Category</th>
@@ -100,29 +100,29 @@ export const BucketTable: React.FC<BucketTableProps> = ({
             <th className="p-3 text-right">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800/80 text-slate-200">
+        <tbody className="divide-y divide-border text-foreground">
           {buckets.map((b) => (
-            <tr key={b._id} className="hover:bg-slate-800/40 transition-colors">
+            <tr key={b._id} className="hover:bg-muted/50 transition-colors">
               <td className="p-3">
-                <div className="font-semibold text-slate-100 flex items-center gap-1.5">
-                  <span className="font-mono text-indigo-300">{b.programmeCode}</span>
-                  <span className="text-slate-500">•</span>
-                  <span className="font-mono text-slate-400">{b.academicYear}</span>
+                <div className="font-semibold text-foreground flex items-center gap-1.5">
+                  <span className="font-mono text-primary font-bold">{b.programmeCode}</span>
+                  <span className="text-muted-foreground/60">•</span>
+                  <span className="font-mono text-muted-foreground">{b.academicYear}</span>
                 </div>
-                <div className="font-mono text-[10px] text-slate-500 truncate max-w-[200px]">
+                <div className="font-mono text-[10px] text-muted-foreground truncate max-w-[200px]">
                   {b.bucketKey}
                 </div>
               </td>
 
               <td className="p-3">
-                <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-mono text-[11px]">
+                <span className="px-2 py-0.5 rounded bg-muted text-foreground font-mono text-[11px] border border-border/60">
                   {b.seatCategory}
                 </span>
               </td>
 
               <td className="p-3">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold font-mono text-slate-100">
+                  <span className="font-bold font-mono text-foreground">
                     {b.approvedIntake !== null ? b.approvedIntake : '—'}
                   </span>
                   {(b.isSimulated || b.intakeSourceMode === 'SIMULATED') && (
@@ -131,36 +131,36 @@ export const BucketTable: React.FC<BucketTableProps> = ({
                     </Badge>
                   )}
                 </div>
-                <div className="text-[10px] text-slate-400 truncate max-w-[150px]">
+                <div className="text-[10px] text-muted-foreground truncate max-w-[150px]">
                   {b.intakeVerificationStatus}
                 </div>
               </td>
 
-              <td className="p-3 text-right font-mono font-semibold text-slate-100">
+              <td className="p-3 text-right font-mono font-semibold text-foreground">
                 {b.reportedOccupancy}
               </td>
 
               <td className="p-3 text-right font-mono">
                 {b.headroom === null ? (
-                  <span className="text-slate-500">—</span>
+                  <span className="text-muted-foreground">—</span>
                 ) : b.headroom < 0 ? (
-                  <span className="text-rose-400 font-bold">{b.headroom}</span>
+                  <span className="text-rose-600 dark:text-rose-400 font-bold">{b.headroom}</span>
                 ) : b.headroom === 0 ? (
-                  <span className="text-amber-400 font-bold">0</span>
+                  <span className="text-amber-600 dark:text-amber-400 font-bold">0</span>
                 ) : (
-                  <span className="text-emerald-400 font-semibold">+{b.headroom}</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">+{b.headroom}</span>
                 )}
               </td>
 
               <td className="p-3">
                 <div className="space-y-1">
                   <div className="flex justify-between text-[11px] font-mono">
-                    <span className="text-slate-400">
+                    <span className="text-muted-foreground">
                       {b.utilisationPct !== null ? `${b.utilisationPct.toFixed(1)}%` : '—'}
                     </span>
-                    <span className="text-[10px] text-slate-500">Cap {b.approvedIntake ?? '?'}</span>
+                    <span className="text-[10px] text-muted-foreground/80">Cap {b.approvedIntake ?? '?'}</span>
                   </div>
-                  <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                  <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
                     <div
                       className={`h-full transition-all duration-300 ${getUtilisationColor(b.utilisationPct)}`}
                       style={{
@@ -181,7 +181,7 @@ export const BucketTable: React.FC<BucketTableProps> = ({
                     onClick={() => onSelectBucket(b)}
                     variant="ghost"
                     size="sm"
-                    className="h-7 px-2 text-xs text-indigo-400 hover:text-indigo-300"
+                    className="h-7 px-2 text-xs text-primary hover:text-primary/80"
                     title="Inspect Ledger Entries & Timeline"
                   >
                     <Eye className="w-3.5 h-3.5 mr-1" />
@@ -205,7 +205,7 @@ export const BucketTable: React.FC<BucketTableProps> = ({
                       onClick={() => onQuickApprove(b)}
                       variant="outline"
                       size="sm"
-                      className="h-7 px-2 text-xs text-teal-400 hover:text-teal-300"
+                      className="h-7 px-2 text-xs text-teal-600 dark:text-teal-400 hover:text-teal-500"
                       title="Set authoritative capacity"
                     >
                       Approve

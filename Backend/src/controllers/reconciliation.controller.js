@@ -10,6 +10,7 @@ const {
 } = require('../services/reconciliationService');
 const { getFindings } = require('../services/findingService');
 const { sendSuccess, sendError } = require('../utils/apiResponse');
+const { resolveInstitutionId } = require('../utils/institutionResolver');
 
 /**
  * POST /api/v1/reconciliations
@@ -24,7 +25,8 @@ async function createReconciliation(req, res, next) {
       simulationToggles = {}
     } = req.body;
 
-    const institutionId = req.institutionId || req.body.institutionId;
+    const rawInst = req.institutionId || req.body.institutionId;
+    const institutionId = rawInst ? (await resolveInstitutionId(rawInst)) || rawInst : null;
     if (!institutionId) {
       return sendError(res, 'VALIDATION_ERROR', 'institutionId is required.', 400);
     }
@@ -106,10 +108,9 @@ async function listReconciliations(req, res, next) {
     const { page = 1, limit = 25, academicYear } = req.query;
     const filter = {};
 
-    if (req.institutionId) {
-      filter.institutionId = req.institutionId;
-    } else if (req.query.institutionId) {
-      filter.institutionId = req.query.institutionId;
+    const rawInst = req.institutionId || req.query.institutionId;
+    if (rawInst) {
+      filter.institutionId = (await resolveInstitutionId(rawInst)) || rawInst;
     }
 
     if (academicYear) {

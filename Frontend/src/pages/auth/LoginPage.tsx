@@ -207,9 +207,12 @@ export const LoginPage: React.FC = () => {
           <div className="w-14 h-14 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/25 mb-1">
             <ShieldCheck className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            APAAR Seat Integrity Platform
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
+            SeatSeal
           </h1>
+          <p className="text-sm font-semibold text-primary tracking-wide">
+            Every Seat Is Seal
+          </p>
           <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
             AICTE / Higher Education Seat Matrix, Cryptographic Audit Trail & Institutional Reliability Scorecard
           </p>

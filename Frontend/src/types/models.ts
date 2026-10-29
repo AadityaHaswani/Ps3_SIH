@@ -553,9 +553,9 @@ export interface TransferCase {
   caseId?: string;
   studentTokenId: string;
   studentRef?: string;
-  sendingInstitutionId: string;
+  sendingInstitutionId: string | { _id?: string; code?: string; name?: string; type?: string };
   sendingProgrammeCode?: string;
-  receivingInstitutionId: string;
+  receivingInstitutionId: string | { _id?: string; code?: string; name?: string; type?: string };
   receivingProgrammeCode?: string;
   programmeCode: string;
   academicYear: string;

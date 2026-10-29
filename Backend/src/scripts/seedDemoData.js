@@ -1011,7 +1011,7 @@ async function seedDemoData(options = {}) {
     // -------------------------------------------------------------------------
     // 4. SIMULATED EXTERNAL REGISTERS & RECONCILIATION RUNS (Feature 1)
     // -------------------------------------------------------------------------
-    const storedV2Rows = await RosterRow.find({ rosterVersionId: sit1Version2._id }).lean();
+    const storedV2Rows = await RosterRow.find({ rosterVersionId: sit1Version2._id }).sort({ applicationNo: 1 }).lean();
 
     // Plant P2: 3 synthetic students absent from mock admission register
     const p2OmittedAppNos = storedV2Rows && storedV2Rows.length >= 3
@@ -1278,30 +1278,36 @@ async function seedDemoData(options = {}) {
     });
 
     if (!p4Transfer) {
-      await recordLifecycleEvent({
-        studentTokenId: p4Token,
-        keyVersion: 'v1',
-        institutionId: instMap['SIT-DEMO-01']._id,
-        programmeCode: p4StudentRow.programmeCode,
-        academicYear: '2024-25',
-        seatCategory: p4StudentRow.category,
-        type: 'ADMITTED',
-        effectiveDate: '2024-07-01',
-        reason: 'Regular merit counselling admission',
-        user: committerUser
-      });
-      await recordLifecycleEvent({
-        studentTokenId: p4Token,
-        keyVersion: 'v1',
-        institutionId: instMap['SIT-DEMO-01']._id,
-        programmeCode: p4StudentRow.programmeCode,
-        academicYear: '2024-25',
-        seatCategory: p4StudentRow.category,
-        type: 'ENROLLED',
-        effectiveDate: '2024-07-05',
-        reason: 'Course registration confirmed',
-        user: committerUser
-      });
+      const existingAdmitted = await StudentLifecycleEvent.findOne({ studentTokenId: p4Token, type: 'ADMITTED' });
+      if (!existingAdmitted) {
+        await recordLifecycleEvent({
+          studentTokenId: p4Token,
+          keyVersion: 'v1',
+          institutionId: instMap['SIT-DEMO-01']._id,
+          programmeCode: p4StudentRow.programmeCode,
+          academicYear: '2024-25',
+          seatCategory: p4StudentRow.category,
+          type: 'ADMITTED',
+          effectiveDate: '2024-07-01',
+          reason: 'Regular merit counselling admission',
+          user: committerUser
+        });
+      }
+      const existingEnrolled = await StudentLifecycleEvent.findOne({ studentTokenId: p4Token, type: 'ENROLLED' });
+      if (!existingEnrolled) {
+        await recordLifecycleEvent({
+          studentTokenId: p4Token,
+          keyVersion: 'v1',
+          institutionId: instMap['SIT-DEMO-01']._id,
+          programmeCode: p4StudentRow.programmeCode,
+          academicYear: '2024-25',
+          seatCategory: p4StudentRow.category,
+          type: 'ENROLLED',
+          effectiveDate: '2024-07-05',
+          reason: 'Course registration confirmed',
+          user: committerUser
+        });
+      }
 
       const tcRes = await createTransferCase(
         {

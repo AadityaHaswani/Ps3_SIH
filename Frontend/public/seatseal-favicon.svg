@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <defs>
+    <linearGradient id="sealGrad" x1="2" y1="2" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2563EB"/>
+      <stop offset="50%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+    <filter id="glow" x="-2" y="-2" width="36" height="36" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#1E3A8A" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="#0B132B"/>
+  <!-- Shield outline -->
+  <path d="M16 4L6 8.5V15.5C6 22 10.5 26.8 16 28C21.5 26.8 26 22 26 15.5V8.5L16 4Z" fill="url(#sealGrad)" filter="url(#glow)"/>
+  <!-- Seal rosette / inner seal -->
+  <path d="M16 8L18 10.5L21.2 9.8L21.8 13L24.8 14.5L23.8 17.5L25.5 20.2L22.5 21.8L21.8 25L18.5 24.5L16 27L13.5 24.5L10.2 25L9.5 21.8L6.5 20.2L8.2 17.5L7.2 14.5L10.2 13L10.8 9.8L14 10.5L16 8Z" fill="#0F172A" fill-opacity="0.25"/>
+  <!-- Checkmark / Seal stamp -->
+  <path d="M11.5 16L14.5 19L20.5 13" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

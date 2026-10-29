@@ -25,6 +25,7 @@ const {
   normaliseAcademicYear,
   normaliseCategory
 } = require('../utils/normalisation');
+const { resolveInstitutionId } = require('../utils/institutionResolver');
 
 /**
  * GET /api/v1/seat-ledger/balances
@@ -32,7 +33,8 @@ const {
  */
 async function getSeatBalances(req, res, next) {
   try {
-    const institutionId = req.institutionId || req.query.institutionId;
+    const rawInst = req.institutionId || req.query.institutionId;
+    const institutionId = rawInst ? (await resolveInstitutionId(rawInst)) || rawInst : null;
     const {
       academicYear,
       programmeCode,
@@ -129,7 +131,8 @@ async function getSeatBalanceHistory(req, res, next) {
  */
 async function declareIntake(req, res, next) {
   try {
-    const institutionId = req.institutionId || req.body.institutionId;
+    const rawInst = req.institutionId || req.body.institutionId;
+    const institutionId = rawInst ? (await resolveInstitutionId(rawInst)) || rawInst : null;
     if (!institutionId) {
       return sendError(res, 'VALIDATION_ERROR', 'institutionId is required.', 400);
     }
@@ -192,7 +195,8 @@ async function declareIntake(req, res, next) {
  */
 async function updateApprovedIntake(req, res, next) {
   try {
-    const institutionId = req.body.institutionId;
+    const rawInst = req.body.institutionId;
+    const institutionId = rawInst ? (await resolveInstitutionId(rawInst)) || rawInst : null;
     if (!institutionId) {
       return sendError(res, 'VALIDATION_ERROR', 'institutionId is required.', 400);
     }
@@ -321,7 +325,8 @@ async function createRule(req, res, next) {
  */
 async function verifyIntegrity(req, res, next) {
   try {
-    const institutionId = req.institutionId || req.body.institutionId || req.query.institutionId;
+    const rawInst = req.institutionId || req.body.institutionId || req.query.institutionId;
+    const institutionId = rawInst ? (await resolveInstitutionId(rawInst)) || rawInst : null;
     const { academicYear, programmeCode } = req.body;
 
     const report = await verifyLedgerIntegrity({
@@ -342,7 +347,8 @@ async function verifyIntegrity(req, res, next) {
  */
 async function getMassBalance(req, res, next) {
   try {
-    const institutionId = req.institutionId || req.query.institutionId;
+    const rawInst = req.institutionId || req.query.institutionId;
+    const institutionId = rawInst ? (await resolveInstitutionId(rawInst)) || rawInst : null;
     const {
       programmeCode,
       academicYear,

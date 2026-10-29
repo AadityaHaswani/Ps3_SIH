@@ -1,5 +1,5 @@
-# BACKEND CONTEXT FOR FRONTEND
-## SIH 2026 PS3 — APAAR Seat Integrity Platform
+# SeatSeal — Every Seat Is Seal
+## SIH 2026 PS3 — SeatSeal Platform Context
 **Source-verified from actual code (not README). Where code and README disagree, code wins.**
 **Generated:** 2026-10-25 | Backend commit: `1beb811`
 

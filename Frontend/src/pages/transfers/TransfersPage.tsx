@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useAuth } from '../../auth';
 import { usePermission } from '../../auth/usePermission';
+import { useInstitutions } from '../../hooks/useInstitutions';
 import { transferApi } from '../../api/modules/transfer.api';
 import { queryKeys } from '../../api/queryKeys';
 import type { TransferCase } from '../../types/models';
@@ -25,7 +26,8 @@ import {
 export const TransfersPage: React.FC = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const institutionId = user?.institutionId || 'SIT-DEMO-01';
+  const { selectedInstitutionId } = useInstitutions();
+  const institutionId = user?.institutionId ? String(user.institutionId) : (selectedInstitutionId || 'SIT-DEMO-01');
 
   const canCreate = usePermission('transfers:create');
   const canSweep = usePermission('transfers:process-timeouts');
@@ -76,6 +78,14 @@ export const TransfersPage: React.FC = () => {
       toast.error(err.message || 'Timeout sweep failed');
     },
   });
+
+  const getInstitutionDisplay = (inst: any): string => {
+    if (!inst) return '—';
+    if (typeof inst === 'object') {
+      return inst.name ? (inst.code ? `${inst.name} (${inst.code})` : inst.name) : (inst.code || inst._id || '—');
+    }
+    return String(inst);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -261,8 +271,8 @@ export const TransfersPage: React.FC = () => {
                   </td>
 
                   <td className="p-3">
-                    <div className="font-semibold text-slate-200 text-xs truncate max-w-[150px]">
-                      {t.sendingInstitutionId}
+                    <div className="font-semibold text-slate-200 text-xs truncate max-w-[180px]" title={getInstitutionDisplay(t.sendingInstitutionId)}>
+                      {getInstitutionDisplay(t.sendingInstitutionId)}
                     </div>
                     <span className="font-mono text-[10px] text-slate-400">
                       {t.sendingProgrammeCode || t.programmeCode}
@@ -270,8 +280,8 @@ export const TransfersPage: React.FC = () => {
                   </td>
 
                   <td className="p-3">
-                    <div className="font-semibold text-slate-200 text-xs truncate max-w-[150px]">
-                      {t.receivingInstitutionId}
+                    <div className="font-semibold text-slate-200 text-xs truncate max-w-[180px]" title={getInstitutionDisplay(t.receivingInstitutionId)}>
+                      {getInstitutionDisplay(t.receivingInstitutionId)}
                     </div>
                     <span className="font-mono text-[10px] text-slate-400">
                       {t.receivingProgrammeCode || t.programmeCode}

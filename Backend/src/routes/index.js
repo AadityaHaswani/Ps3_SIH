@@ -20,12 +20,14 @@ const auditRoutes = require('./audit.routes');
 const rosterVersionRoutes = require('./rosterVersion.routes');
 const authRoutes = require('./auth.routes');
 const userRoutes = require('./user.routes');
+const institutionRoutes = require('./institution.routes');
 
 const router = express.Router();
 
 // Mount modular sub-routes
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
+router.use('/institutions', institutionRoutes);
 router.use('/health', healthRoutes);
 router.use('/rosters', rosterRoutes);
 router.use('/roster-versions', rosterVersionRoutes);

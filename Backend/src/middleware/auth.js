@@ -172,95 +172,134 @@ function authorize(allowedRolesOrPermissions = []) {
  * - AUDITOR role is strictly read-only.
  * - Overriding verified institution context via client payload is rejected with 403.
  */
-function scopeToInstitution(req, res, next) {
-  if (!req.user || !req.user.role) {
-    return sendError(res, 'UNAUTHENTICATED', 'Authentication required.', 401);
-  }
+const { resolveInstitutionId } = require('../utils/institutionResolver');
 
-  // Global policy: AUDITOR is strictly read-only and cannot perform mutations
-  if (req.user.role === ROLES.AUDITOR && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
-    const isVerificationPost =
-      req.method === 'POST' &&
-      (req.originalUrl.includes('/verify-integrity') || req.originalUrl.includes('/verify-seal'));
-    if (!isVerificationPost) {
-      return sendError(res, 'FORBIDDEN', 'Auditors are read-only and cannot mutate data.', 403);
-    }
-  }
-
-  const isInstitutionRole = req.user.role && req.user.role.startsWith('INSTITUTION_');
-
-  if (isInstitutionRole) {
-    const userInstId = req.user.institutionId ? String(req.user.institutionId) : null;
-    if (!userInstId) {
-      return sendError(res, 'FORBIDDEN', 'Institution user is not associated with an institution.', 403);
+/**
+ * Institution Scoping Middleware.
+ * Enforces strict multi-tenant boundary checks:
+ * - Institution users (INSTITUTION_ADMIN, INSTITUTION_OPERATOR) cannot query or mutate another institution.
+ * - AUTHORITY_OFFICER access is bounded to configured assignedInstitutionIds.
+ * - AUDITOR role is strictly read-only.
+ * - Overriding verified institution context via client payload is rejected with 403.
+ */
+async function scopeToInstitution(req, res, next) {
+  try {
+    if (!req.user || !req.user.role) {
+      return sendError(res, 'UNAUTHENTICATED', 'Authentication required.', 401);
     }
 
-    // Check if client tried to pass a different institutionId in params, query, or body
-    const paramInstId = req.params.institutionId ? String(req.params.institutionId) : null;
-    const queryInstId = req.query.institutionId ? String(req.query.institutionId) : null;
-    const bodyInstId = req.body && req.body.institutionId ? String(req.body.institutionId) : null;
-
-    if (
-      (paramInstId && paramInstId !== userInstId) ||
-      (queryInstId && queryInstId !== userInstId) ||
-      (bodyInstId && bodyInstId !== userInstId)
-    ) {
-      return sendError(res, 'FORBIDDEN', 'Cross-institution access is strictly prohibited.', 403);
-    }
-
-    // Force verified institutionId onto request
-    req.institutionId = userInstId;
-  } else if (req.user.role === ROLES.AUTHORITY_OFFICER) {
-    // AUTHORITY_OFFICER Scoping: bounded by assignedInstitutionIds
-    const assigned = Array.isArray(req.user.assignedInstitutionIds)
-      ? req.user.assignedInstitutionIds.map(String)
-      : [];
-
-    const requestedInstId =
-      req.params.institutionId ||
-      req.query.institutionId ||
-      (req.body && req.body.institutionId ? req.body.institutionId : null) ||
-      null;
-
-    if (assigned.length > 0) {
-      if (requestedInstId && !assigned.includes(String(requestedInstId))) {
-        return sendError(
-          res,
-          'FORBIDDEN',
-          'Access forbidden: institution is outside your assigned institutions.',
-          403
-        );
+    // Global policy: AUDITOR is strictly read-only and cannot perform mutations
+    if (req.user.role === ROLES.AUDITOR && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+      const isVerificationPost =
+        req.method === 'POST' &&
+        (req.originalUrl.includes('/verify-integrity') || req.originalUrl.includes('/verify-seal'));
+      if (!isVerificationPost) {
+        return sendError(res, 'FORBIDDEN', 'Auditors are read-only and cannot mutate data.', 403);
       }
-      req.institutionId = requestedInstId ? String(requestedInstId) : null;
-      req.assignedInstitutionIds = assigned;
+    }
+
+    const isInstitutionRole = req.user.role && req.user.role.startsWith('INSTITUTION_');
+
+    if (isInstitutionRole) {
+      const userInstId = req.user.institutionId ? String(req.user.institutionId) : null;
+      if (!userInstId) {
+        return sendError(res, 'FORBIDDEN', 'Institution user is not associated with an institution.', 403);
+      }
+
+      // Resolve any code to ObjectId if passed in params, query, or body
+      let paramInstId = req.params.institutionId ? String(req.params.institutionId) : null;
+      let queryInstId = req.query.institutionId ? String(req.query.institutionId) : null;
+      let bodyInstId = req.body && req.body.institutionId ? String(req.body.institutionId) : null;
+
+      if (paramInstId) paramInstId = (await resolveInstitutionId(paramInstId)) || paramInstId;
+      if (queryInstId) {
+        queryInstId = (await resolveInstitutionId(queryInstId)) || queryInstId;
+        req.query.institutionId = queryInstId;
+      }
+      if (bodyInstId) {
+        bodyInstId = (await resolveInstitutionId(bodyInstId)) || bodyInstId;
+        req.body.institutionId = bodyInstId;
+      }
+
+      if (
+        (paramInstId && paramInstId !== userInstId) ||
+        (queryInstId && queryInstId !== userInstId) ||
+        (bodyInstId && bodyInstId !== userInstId)
+      ) {
+        return sendError(res, 'FORBIDDEN', 'Cross-institution access is strictly prohibited.', 403);
+      }
+
+      // Force verified institutionId onto request
+      req.institutionId = userInstId;
+    } else if (req.user.role === ROLES.AUTHORITY_OFFICER) {
+      // AUTHORITY_OFFICER Scoping: bounded by assignedInstitutionIds
+      const assigned = Array.isArray(req.user.assignedInstitutionIds)
+        ? req.user.assignedInstitutionIds.map(String)
+        : [];
+
+      let rawRequestedInstId =
+        req.params.institutionId ||
+        req.query.institutionId ||
+        (req.body && req.body.institutionId ? req.body.institutionId : null) ||
+        null;
+
+      const requestedInstId = rawRequestedInstId ? (await resolveInstitutionId(rawRequestedInstId)) || rawRequestedInstId : null;
+      if (requestedInstId && req.query.institutionId) {
+        req.query.institutionId = requestedInstId;
+      }
+      if (requestedInstId && req.body && req.body.institutionId) {
+        req.body.institutionId = requestedInstId;
+      }
+
+      if (assigned.length > 0) {
+        if (requestedInstId && !assigned.includes(String(requestedInstId))) {
+          return sendError(
+            res,
+            'FORBIDDEN',
+            'Access forbidden: institution is outside your assigned institutions.',
+            403
+          );
+        }
+        req.institutionId = requestedInstId ? String(requestedInstId) : null;
+        req.assignedInstitutionIds = assigned;
+      } else {
+        const isPolicyGlobalAuthorized =
+          process.env.AUTHORITY_OFFICER_GLOBAL_ACCESS === 'true' ||
+          (process.env.NODE_ENV === 'test' && !req.user._id);
+
+        if (!isPolicyGlobalAuthorized && requestedInstId) {
+          return sendError(
+            res,
+            'FORBIDDEN',
+            'Access forbidden: authority officer has no assigned institutions and global access is not authorized.',
+            403
+          );
+        }
+        req.institutionId = requestedInstId ? String(requestedInstId) : null;
+        req.assignedInstitutionIds = [];
+      }
     } else {
-      // CANONICAL POLICY: An empty assignment list must not silently become global access
-      // unless an explicit, validated policy setting authorizes it.
-      const isPolicyGlobalAuthorized =
-        process.env.AUTHORITY_OFFICER_GLOBAL_ACCESS === 'true' ||
-        (process.env.NODE_ENV === 'test' && !req.user._id); // non-persisted test mock header fallback
+      // PLATFORM_ADMIN, AUTHORITY_ADMIN, AUDITOR can query specified institution or globally
+      const rawInstId =
+        req.params.institutionId ||
+        req.query.institutionId ||
+        (req.body && req.body.institutionId ? req.body.institutionId : null) ||
+        null;
 
-      if (!isPolicyGlobalAuthorized && requestedInstId) {
-        return sendError(
-          res,
-          'FORBIDDEN',
-          'Access forbidden: authority officer has no assigned institutions and global access is not authorized.',
-          403
-        );
+      const resolved = rawInstId ? (await resolveInstitutionId(rawInstId)) || rawInstId : null;
+      req.institutionId = resolved;
+      if (resolved && req.query.institutionId) {
+        req.query.institutionId = resolved;
       }
-      req.institutionId = requestedInstId ? String(requestedInstId) : null;
-      req.assignedInstitutionIds = [];
+      if (resolved && req.body && req.body.institutionId) {
+        req.body.institutionId = resolved;
+      }
     }
-  } else {
-    // PLATFORM_ADMIN, AUTHORITY_ADMIN, AUDITOR can query specified institution or globally
-    req.institutionId =
-      req.params.institutionId ||
-      req.query.institutionId ||
-      (req.body && req.body.institutionId ? req.body.institutionId : null) ||
-      null;
-  }
 
-  next();
+    next();
+  } catch (err) {
+    next(err);
+  }
 }
 
 module.exports = {

@@ -128,7 +128,7 @@ async function listTransfers(req, res, next) {
 
     const user = req.user || {};
     const result = await transferService.listTransferCases(filters, pagination, user);
-    return sendSuccess(res, result.transfers, 200, result.pagination);
+    return sendSuccess(res, result.items, 200, result.pagination);
   } catch (err) {
     if (err.statusCode === 403) {
       return sendError(res, 'FORBIDDEN', err.message, 403);

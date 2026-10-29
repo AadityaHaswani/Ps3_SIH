@@ -1,7 +1,7 @@
 {
-  "name": "ps3-backend",
+  "name": "seatseal-backend",
   "version": "1.0.0",
-  "description": "SIH 2026 PS3 APAAR Seat Integrity Platform - Backend",
+  "description": "SeatSeal — Every Seat Is Seal - Backend",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",

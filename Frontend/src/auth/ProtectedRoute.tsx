@@ -27,10 +27,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         </div>
         <div className="text-center">
           <p className="text-sm font-semibold text-foreground tracking-wide">
-            APAAR Seat Integrity Platform
+            SeatSeal
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Restoring secure cryptographic session...
+            Every Seat Is Seal &bull; Restoring secure cryptographic session...
           </p>
         </div>
       </div>

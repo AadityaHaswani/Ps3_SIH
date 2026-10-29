@@ -36,7 +36,7 @@ export function normalizePaginatedResponse<T>(
 ): NormalizedPaginatedResult<T> {
   const env = envelope as ApiEnvelope<unknown>;
   const rawData = env?.data ?? envelope;
-  const metaPagination = env?.meta?.pagination as PaginationMeta | undefined;
+  const metaPagination = (env?.meta?.pagination || (env?.meta && typeof (env.meta as any).total === 'number' ? env.meta : undefined)) as PaginationMeta | undefined;
 
   let items: T[] = [];
   let pagination: PaginationMeta = {
@@ -64,6 +64,8 @@ export function normalizePaginatedResponse<T>(
     // Locate items array
     if (Array.isArray(obj.items)) {
       items = obj.items as T[];
+    } else if (Array.isArray(obj.transfers)) {
+      items = obj.transfers as T[];
     } else if (Array.isArray(obj.findings)) {
       items = obj.findings as T[];
     } else if (Array.isArray(obj.cases)) {

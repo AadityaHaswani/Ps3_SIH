@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../auth';
+import { useInstitutions } from '../../hooks/useInstitutions';
 import { reconciliationApi } from '../../api/modules/reconciliation.api';
 import { queryKeys } from '../../api/queryKeys';
 import type { ReconciliationFinding } from '../../types/models';
@@ -23,7 +24,8 @@ import {
 
 export const FindingsPage: React.FC = () => {
   const { user } = useAuth();
-  const institutionId = user?.institutionId || 'SIT-DEMO-01';
+  const { selectedInstitutionId } = useInstitutions();
+  const institutionId = user?.institutionId ? String(user.institutionId) : (selectedInstitutionId || 'SIT-DEMO-01');
 
   // Filters & State
   const [activeTab, setActiveTab] = useState<'PENDING' | 'CLARIFICATION_REQUESTED' | 'CONFIRMED' | 'ALL'>('PENDING');

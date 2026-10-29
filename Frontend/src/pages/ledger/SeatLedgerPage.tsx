@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../auth';
 import { usePermission } from '../../auth/usePermission';
+import { useInstitutions } from '../../hooks/useInstitutions';
 import { ledgerApi } from '../../api/modules/ledger.api';
 import { queryKeys } from '../../api/queryKeys';
 import type { SeatBalance } from '../../types/models';
@@ -32,7 +33,8 @@ import {
 
 export const SeatLedgerPage: React.FC = () => {
   const { user } = useAuth();
-  const institutionId = user?.institutionId || 'SIT-DEMO-01';
+  const { selectedInstitutionId } = useInstitutions();
+  const institutionId = user?.institutionId ? String(user.institutionId) : (selectedInstitutionId || 'SIT-DEMO-01');
 
   // Permissions
   const canDeclare = usePermission('seat-intake:declare');
@@ -111,15 +113,15 @@ export const SeatLedgerPage: React.FC = () => {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-5">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400">
+            <span className="p-1.5 rounded-lg bg-primary/10 text-primary">
               <FileSpreadsheet className="w-5 h-5" />
             </span>
-            <h1 className="text-xl font-bold text-slate-100">Seat Ledger & Capacity Matrix</h1>
+            <h1 className="text-xl font-bold text-foreground">Seat Ledger & Capacity Matrix</h1>
           </div>
-          <p className="text-xs text-slate-400 leading-relaxed max-w-2xl">
+          <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl">
             Append-only transactional ledger tracking sanctioned vs actual student enrolment. Ensures double-entry consistency across all institutional cohorts and seat categories.
           </p>
         </div>
@@ -171,53 +173,53 @@ export const SeatLedgerPage: React.FC = () => {
 
       {/* KPI Overview Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <Card className="p-3 bg-slate-900/60 border-slate-800">
-          <div className="text-[11px] text-slate-400 font-medium">Total Buckets</div>
-          <div className="text-2xl font-bold font-mono text-slate-100 mt-1">{pagination.total}</div>
-          <div className="text-[10px] text-slate-500 mt-0.5">Across all cohorts</div>
+        <Card className="p-3 bg-card border-border shadow-sm">
+          <div className="text-[11px] text-muted-foreground font-medium">Total Buckets</div>
+          <div className="text-2xl font-bold font-mono text-foreground mt-1">{pagination.total}</div>
+          <div className="text-[10px] text-muted-foreground/80 mt-0.5">Across all cohorts</div>
         </Card>
 
-        <Card className="p-3 bg-slate-900/60 border-slate-800">
-          <div className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+        <Card className="p-3 bg-card border-border shadow-sm">
+          <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
             <CheckCircle2 className="w-3 h-3" /> Healthy Capacity
           </div>
-          <div className="text-2xl font-bold font-mono text-emerald-400 mt-1">{countOk}</div>
-          <div className="text-[10px] text-slate-500 mt-0.5">&lt;90% utilised</div>
+          <div className="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1">{countOk}</div>
+          <div className="text-[10px] text-muted-foreground/80 mt-0.5">&lt;90% utilised</div>
         </Card>
 
-        <Card className="p-3 bg-slate-900/60 border-slate-800">
-          <div className="text-[11px] text-amber-400 font-medium flex items-center gap-1">
+        <Card className="p-3 bg-card border-border shadow-sm">
+          <div className="text-[11px] text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
             <Clock className="w-3 h-3" /> Warning Near Cap
           </div>
-          <div className="text-2xl font-bold font-mono text-amber-400 mt-1">{countWarning}</div>
-          <div className="text-[10px] text-slate-500 mt-0.5">≥90% utilised</div>
+          <div className="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400 mt-1">{countWarning}</div>
+          <div className="text-[10px] text-muted-foreground/80 mt-0.5">≥90% utilised</div>
         </Card>
 
-        <Card className="p-3 bg-slate-900/60 border-slate-800">
-          <div className="text-[11px] text-rose-400 font-medium flex items-center gap-1">
+        <Card className="p-3 bg-card border-border shadow-sm">
+          <div className="text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
             <AlertTriangle className="w-3 h-3" /> Over-Cap Discrepancies
           </div>
-          <div className="text-2xl font-bold font-mono text-rose-400 mt-1">{countOverCap}</div>
-          <div className="text-[10px] text-slate-500 mt-0.5">&gt;100% capacity</div>
+          <div className="text-2xl font-bold font-mono text-rose-600 dark:text-rose-400 mt-1">{countOverCap}</div>
+          <div className="text-[10px] text-muted-foreground/80 mt-0.5">&gt;100% capacity</div>
         </Card>
 
-        <Card className="p-3 bg-slate-900/60 border-slate-800 col-span-2 md:col-span-1">
-          <div className="text-[11px] text-blue-400 font-medium flex items-center gap-1">
+        <Card className="p-3 bg-card border-border shadow-sm col-span-2 md:col-span-1">
+          <div className="text-[11px] text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1">
             <Layers className="w-3 h-3" /> Unverified Declarations
           </div>
-          <div className="text-2xl font-bold font-mono text-blue-400 mt-1">{countUnverified}</div>
-          <div className="text-[10px] text-slate-500 mt-0.5">Pending authority check</div>
+          <div className="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400 mt-1">{countUnverified}</div>
+          <div className="text-[10px] text-muted-foreground/80 mt-0.5">Pending authority check</div>
         </Card>
       </div>
 
       {/* Tabs navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+      <div className="flex items-center gap-2 border-b border-border pb-3">
         <button
           onClick={() => setActiveTab('balances')}
           className={`px-3.5 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
             activeTab === 'balances'
-              ? 'bg-indigo-600 text-white shadow-sm'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
           }`}
         >
           <Layers className="w-3.5 h-3.5" />
@@ -228,8 +230,8 @@ export const SeatLedgerPage: React.FC = () => {
           onClick={() => setActiveTab('massBalance')}
           className={`px-3.5 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
             activeTab === 'massBalance'
-              ? 'bg-indigo-600 text-white shadow-sm'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
           }`}
         >
           <Scale className="w-3.5 h-3.5" />
@@ -240,8 +242,8 @@ export const SeatLedgerPage: React.FC = () => {
           onClick={() => setActiveTab('rules')}
           className={`px-3.5 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
             activeTab === 'rules'
-              ? 'bg-indigo-600 text-white shadow-sm'
-              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
           }`}
         >
           <BookOpen className="w-3.5 h-3.5" />
@@ -253,18 +255,18 @@ export const SeatLedgerPage: React.FC = () => {
       {activeTab === 'balances' && (
         <div className="space-y-4">
           {/* Filter Bar */}
-          <Card className="p-3 bg-slate-900/60 border-slate-800">
+          <Card className="p-3 bg-card border-border shadow-sm">
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex-1 min-w-[180px]">
                 <div className="relative">
-                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     value={searchProgramme}
                     onChange={(e) => {
                       setSearchProgramme(e.target.value.toUpperCase());
                       setPage(1);
                     }}
-                    placeholder="Search Programme Code (e.g. CS-BTECH)..."
+                    placeholder="Search Programme Code (e.g. BTECH-CSE)..."
                     className="pl-8 text-xs font-mono"
                   />
                 </div>
@@ -277,7 +279,7 @@ export const SeatLedgerPage: React.FC = () => {
                     setAcademicYear(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-2.5 py-2 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+                  className="w-full bg-background border border-input rounded-md px-2.5 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono"
                 >
                   <option value="">All Academic Years</option>
                   <option value="2024-25">2024-25</option>
@@ -293,7 +295,7 @@ export const SeatLedgerPage: React.FC = () => {
                     setSeatCategory(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-2.5 py-2 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+                  className="w-full bg-background border border-input rounded-md px-2.5 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono"
                 >
                   <option value="">All Categories</option>
                   <option value="ALL">ALL (Aggregated)</option>
@@ -312,7 +314,7 @@ export const SeatLedgerPage: React.FC = () => {
                     setStatusFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-2.5 py-2 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full bg-background border border-input rounded-md px-2.5 py-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                   <option value="">All Statuses</option>
                   <option value="OK">OK</option>
@@ -333,7 +335,7 @@ export const SeatLedgerPage: React.FC = () => {
                   setStatusFilter('');
                   setPage(1);
                 }}
-                className="text-xs text-slate-400 hover:text-slate-200"
+                className="text-xs text-muted-foreground hover:text-foreground"
               >
                 Reset Filters
               </Button>

@@ -11,6 +11,7 @@ const { getImpactByVersionId, revalidateOutput } = require('../services/impactSe
 const { verifyRosterSeal } = require('../services/sealService');
 const { generateRosterReceipt, generateChainHeadReceipt } = require('../services/receiptService');
 const { sendSuccess, sendError } = require('../utils/apiResponse');
+const { resolveInstitutionId } = require('../utils/institutionResolver');
 
 /**
  * GET /api/v1/roster-versions
@@ -18,9 +19,10 @@ const { sendSuccess, sendError } = require('../utils/apiResponse');
  */
 async function handleListVersions(req, res, next) {
   try {
-    const { academicYear, institutionId, page = 1, limit = 20 } = req.query;
+    const { academicYear, institutionId: rawInstId, page = 1, limit = 20 } = req.query;
 
     const query = {};
+    const institutionId = rawInstId ? (await resolveInstitutionId(rawInstId)) || rawInstId : null;
 
     // Institution scoping check
     if (['INSTITUTION_ADMIN', 'INSTITUTION_OPERATOR'].includes(req.user.role)) {
@@ -95,7 +97,8 @@ async function handleListVersions(req, res, next) {
  */
 async function handleGetChainHead(req, res, next) {
   try {
-    let institutionId = req.query.institutionId;
+    let rawInst = req.query.institutionId;
+    let institutionId = rawInst ? (await resolveInstitutionId(rawInst)) || rawInst : null;
     const academicYear = req.query.academicYear || '2024-25';
 
     if (['INSTITUTION_ADMIN', 'INSTITUTION_OPERATOR'].includes(req.user.role)) {

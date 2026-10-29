@@ -69,8 +69,11 @@ export const ActivateAccountPage: React.FC = () => {
             <ShieldCheck className="w-7 h-7" />
           </div>
           <h1 className="text-xl font-bold text-foreground">
-            Account Activation
+            SeatSeal Account Activation
           </h1>
+          <p className="text-xs font-semibold text-primary">
+            Every Seat Is Seal
+          </p>
           <p className="text-xs text-muted-foreground">
             Configure your password to initialize your institutional or authority access.
           </p>

@@ -66,10 +66,28 @@ export const TransferDetailModal: React.FC<TransferDetailModalProps> = ({
 
   if (!transfer) return null;
 
+  const getInstId = (inst: any): string => {
+    if (!inst) return '';
+    if (typeof inst === 'object') return String(inst._id || inst.code || '');
+    return String(inst);
+  };
+
+  const getInstDisplay = (inst: any): string => {
+    if (!inst) return '—';
+    if (typeof inst === 'object') {
+      return inst.name ? (inst.code ? `${inst.name} (${inst.code})` : inst.name) : (inst.code || inst._id || '—');
+    }
+    return String(inst);
+  };
+
   const isSendingAdmin =
-    user?.institutionId && String(user.institutionId) === String(transfer.sendingInstitutionId);
+    !!user?.institutionId &&
+    (String(user.institutionId) === getInstId(transfer.sendingInstitutionId) ||
+      (typeof transfer.sendingInstitutionId === 'object' && String(user.institutionId) === String((transfer.sendingInstitutionId as any)?.code)));
   const isReceivingAdmin =
-    user?.institutionId && String(user.institutionId) === String(transfer.receivingInstitutionId);
+    !!user?.institutionId &&
+    (String(user.institutionId) === getInstId(transfer.receivingInstitutionId) ||
+      (typeof transfer.receivingInstitutionId === 'object' && String(user.institutionId) === String((transfer.receivingInstitutionId as any)?.code)));
   const isAuthority =
     user?.role === 'AUTHORITY_ADMIN' ||
     user?.role === 'AUTHORITY_OFFICER' ||
@@ -144,8 +162,8 @@ export const TransferDetailModal: React.FC<TransferDetailModalProps> = ({
                 {getConfirmationBadge(transfer.sendingConfirmation?.status)}
               </div>
               <div className="space-y-1 text-xs">
-                <div className="font-mono text-indigo-300 truncate font-semibold">
-                  {transfer.sendingInstitutionId}
+                <div className="font-mono text-indigo-300 truncate font-semibold" title={getInstDisplay(transfer.sendingInstitutionId)}>
+                  {getInstDisplay(transfer.sendingInstitutionId)}
                 </div>
                 <div className="text-slate-400 font-mono text-[11px]">
                   Programme: {transfer.sendingProgrammeCode || transfer.programmeCode}
@@ -165,8 +183,8 @@ export const TransferDetailModal: React.FC<TransferDetailModalProps> = ({
                 {getConfirmationBadge(transfer.receivingConfirmation?.status)}
               </div>
               <div className="space-y-1 text-xs">
-                <div className="font-mono text-teal-300 truncate font-semibold">
-                  {transfer.receivingInstitutionId}
+                <div className="font-mono text-teal-300 truncate font-semibold" title={getInstDisplay(transfer.receivingInstitutionId)}>
+                  {getInstDisplay(transfer.receivingInstitutionId)}
                 </div>
                 <div className="text-slate-400 font-mono text-[11px]">
                   Programme: {transfer.receivingProgrammeCode || transfer.programmeCode}

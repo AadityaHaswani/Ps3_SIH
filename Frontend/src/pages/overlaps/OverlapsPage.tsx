@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../auth';
 import { usePermission } from '../../auth/usePermission';
+import { useInstitutions } from '../../hooks/useInstitutions';
 import { transferApi } from '../../api/modules/transfer.api';
 import { queryKeys } from '../../api/queryKeys';
 import type { OverlapCase } from '../../types/models';
@@ -23,7 +24,8 @@ import {
 
 export const OverlapsPage: React.FC = () => {
   const { user } = useAuth();
-  const institutionId = user?.institutionId || 'SIT-DEMO-01';
+  const { selectedInstitutionId } = useInstitutions();
+  const institutionId = user?.institutionId ? String(user.institutionId) : (selectedInstitutionId || 'SIT-DEMO-01');
 
   // Overlap resolution permission
   const canResolve =

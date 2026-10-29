@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../auth';
 import { usePermission } from '../../auth/usePermission';
+import { useInstitutions } from '../../hooks/useInstitutions';
 import { samplingApi } from '../../api/modules/sampling.api';
 import { queryKeys } from '../../api/queryKeys';
 import type { SamplingRun, SamplingItem } from '../../types/models';
@@ -26,7 +27,8 @@ import {
 
 export const SamplingPage: React.FC = () => {
   const { user } = useAuth();
-  const institutionId = user?.institutionId || 'SIT-DEMO-01';
+  const { selectedInstitutionId } = useInstitutions();
+  const institutionId = user?.institutionId ? String(user.institutionId) : (selectedInstitutionId || 'SIT-DEMO-01');
 
   const canCreate = usePermission('sampling:create');
   const canReview = usePermission('sampling:review');

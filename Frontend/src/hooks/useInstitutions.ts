@@ -83,6 +83,38 @@ export function useInstitutions() {
       setIsLoading(true);
 
       try {
+        // First try the dedicated /institutions endpoint which works for all roles
+        try {
+          const res = await apiClient.get<ApiEnvelope<Array<{ id?: string; _id?: string; code: string; name: string; type?: InstitutionType; state?: string }>>>('/institutions');
+          const instList = Array.isArray(res.data?.data) ? res.data.data : [];
+          if (instList.length > 0) {
+            const options: EnrichedInstitutionOption[] = instList.map((inst) => ({
+              id: String(inst.id || inst._id || inst.code),
+              code: inst.code,
+              name: inst.name,
+              type: inst.type,
+              state: inst.state,
+              isDemo: true,
+            }));
+            if (isMounted) {
+              setInstitutions(options);
+              const validIds = options.map((o) => o.id);
+              const myId = currentUser.institutionId ? String(currentUser.institutionId) : null;
+              if (myId && validIds.includes(myId)) {
+                setSelectedInstitutionId(myId);
+                localStorage.setItem(ACTIVE_INSTITUTION_STORAGE_KEY, myId);
+              } else if (!selectedInstitutionId || !validIds.includes(selectedInstitutionId)) {
+                const defaultId = options[0].id;
+                setSelectedInstitutionId(defaultId);
+                localStorage.setItem(ACTIVE_INSTITUTION_STORAGE_KEY, defaultId);
+              }
+            }
+            return;
+          }
+        } catch {
+          // Fall back to role-specific resolution
+        }
+
         const isInstitutionRole =
           currentUser.role === Role.INSTITUTION_ADMIN || currentUser.role === Role.INSTITUTION_OPERATOR;
         const isOfficer = currentUser.role === Role.AUTHORITY_OFFICER;

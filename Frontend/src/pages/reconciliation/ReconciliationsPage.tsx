@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../auth';
 import { usePermission } from '../../auth/usePermission';
+import { useInstitutions } from '../../hooks/useInstitutions';
 import { reconciliationApi } from '../../api/modules/reconciliation.api';
 import { queryKeys } from '../../api/queryKeys';
 import type { ReconciliationRun, ReconciliationFinding } from '../../types/models';
@@ -25,7 +26,8 @@ import {
 
 export const ReconciliationsPage: React.FC = () => {
   const { user } = useAuth();
-  const institutionId = user?.institutionId || 'SIT-DEMO-01';
+  const { selectedInstitutionId } = useInstitutions();
+  const institutionId = user?.institutionId ? String(user.institutionId) : (selectedInstitutionId || 'SIT-DEMO-01');
   const canRun = usePermission('reconciliation:run');
 
   const [academicYear, setAcademicYear] = useState('2024-25');

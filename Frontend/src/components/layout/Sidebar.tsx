@@ -150,14 +150,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             {!collapsed && (
               <div className="flex flex-col truncate">
-                <span className="font-bold text-sm text-foreground tracking-tight flex items-center gap-1.5">
-                  APAAR Seat
-                  <span className="text-[10px] font-semibold text-primary uppercase tracking-widest bg-primary/10 px-1.5 py-0.2 rounded">
+                <span className="font-bold text-base text-foreground tracking-tight flex items-center gap-1.5">
+                  SeatSeal
+                  <span className="text-[9px] font-semibold text-primary uppercase tracking-wider bg-primary/10 px-1.5 py-0.5 rounded">
                     PS3
                   </span>
                 </span>
                 <span className="text-[10px] text-muted-foreground font-medium truncate">
-                  Seat Matrix & Integrity
+                  Every Seat Is Seal
                 </span>
               </div>
             )}

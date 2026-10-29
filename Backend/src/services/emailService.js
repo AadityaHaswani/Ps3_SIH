@@ -73,7 +73,7 @@ async function sendEmail({ to, subject, html, text }) {
 
   const from =
     process.env.MAIL_FROM ||
-    'AICTE APAAR Platform <onboarding@resend.dev>';
+    'SeatSeal <onboarding@resend.dev>';
 
   // Record into test mailbox in test mode or for demo accounts in non-prod
   if (isTest || (!isProduction && isDemoEmail)) {
@@ -152,7 +152,7 @@ async function sendActivationEmail({ to, name, activationToken, expiresMinutes =
   const baseUrl = process.env.APP_BASE_URL || 'http://localhost:5173';
   const activationUrl = `${baseUrl.replace(/\/+$/, '')}/activate-account?token=${encodeURIComponent(activationToken)}&email=${encodeURIComponent(to)}`;
 
-  const subject = 'Activate Your Account — AICTE APAAR Platform';
+  const subject = 'Activate Your Account — SeatSeal';
 
   const hours = Math.round(expiresMinutes / 60);
 
@@ -166,15 +166,15 @@ async function sendActivationEmail({ to, name, activationToken, expiresMinutes =
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px;">
         <div style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
           <div style="border-bottom: 2px solid #2563eb; padding-bottom: 16px; margin-bottom: 24px;">
-            <h2 style="color: #1e293b; margin: 0; font-size: 20px;">AICTE APAAR Seat Integrity Platform</h2>
-            <p style="color: #64748b; margin: 4px 0 0 0; font-size: 13px;">Official Institutional Portal</p>
+            <h2 style="color: #1e293b; margin: 0; font-size: 20px;">SeatSeal</h2>
+            <p style="color: #64748b; margin: 4px 0 0 0; font-size: 13px;">Every Seat Is Seal &bull; Official Institutional Portal</p>
           </div>
           <p style="color: #334155; font-size: 15px; line-height: 1.5;">Hello ${name || 'User'},</p>
-          <p style="color: #334155; font-size: 15px; line-height: 1.5;">An administrative user account has been provisioned for you on the AICTE APAAR Platform. Please click the button below to set your secure password and activate your account:</p>
+          <p style="color: #334155; font-size: 15px; line-height: 1.5;">An administrative user account has been provisioned for you on SeatSeal. Please click the button below to set your secure password and activate your account:</p>
           <div style="text-align: center; margin: 32px 0;">
             <a href="${activationUrl}" style="background-color: #2563eb; color: #ffffff; padding: 12px 28px; font-weight: 600; text-decoration: none; border-radius: 6px; display: inline-block; font-size: 14px;">Set Password & Activate</a>
           </div>
-          <p style="color: #64748b; font-size: 13px; line-height: 1.5;">This single-use activation link will expire in <strong>${hours} hours</strong>. If you did not expect this invitation, please contact your AICTE platform administrator immediately.</p>
+          <p style="color: #64748b; font-size: 13px; line-height: 1.5;">This single-use activation link will expire in <strong>${hours} hours</strong>. If you did not expect this invitation, please contact your SeatSeal platform administrator immediately.</p>
           <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #f1f5f9; font-size: 12px; color: #94a3b8;">
             <p style="margin: 0;">If the button above does not work, copy and paste this link into your browser:</p>
             <p style="word-break: break-all; color: #475569; margin-top: 4px;">${activationUrl}</p>
@@ -184,7 +184,7 @@ async function sendActivationEmail({ to, name, activationToken, expiresMinutes =
     </html>
   `;
 
-  const text = `Hello ${name || 'User'},\n\nAn administrative account has been provisioned for you on the AICTE APAAR Platform.\n\nPlease visit the following link to set your password and activate your account (valid for ${hours} hours):\n\n${activationUrl}\n\nIf you did not request this, please contact your administrator.`;
+  const text = `Hello ${name || 'User'},\n\nAn administrative account has been provisioned for you on SeatSeal.\n\nPlease visit the following link to set your password and activate your account (valid for ${hours} hours):\n\n${activationUrl}\n\nIf you did not request this, please contact your administrator.`;
 
   return sendEmail({ to, subject, html, text });
 }
@@ -193,7 +193,7 @@ async function sendActivationEmail({ to, name, activationToken, expiresMinutes =
  * Sends a two-step authentication login OTP email.
  */
 async function sendLoginOtpEmail({ to, name, otp, expiresMinutes = 10 }) {
-  const subject = 'Your Verification Code — AICTE APAAR Platform';
+  const subject = 'Your Verification Code — SeatSeal';
 
   const html = `
     <!DOCTYPE html>
@@ -205,22 +205,22 @@ async function sendLoginOtpEmail({ to, name, otp, expiresMinutes = 10 }) {
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px;">
         <div style="max-width: 540px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 32px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
           <div style="border-bottom: 2px solid #2563eb; padding-bottom: 16px; margin-bottom: 24px;">
-            <h2 style="color: #1e293b; margin: 0; font-size: 20px;">AICTE APAAR Seat Integrity Platform</h2>
-            <p style="color: #64748b; margin: 4px 0 0 0; font-size: 13px;">Two-Factor Authentication Security</p>
+            <h2 style="color: #1e293b; margin: 0; font-size: 20px;">SeatSeal</h2>
+            <p style="color: #64748b; margin: 4px 0 0 0; font-size: 13px;">Every Seat Is Seal &bull; Two-Factor Authentication Security</p>
           </div>
           <p style="color: #334155; font-size: 15px; line-height: 1.5;">Hello ${name || 'User'},</p>
-          <p style="color: #334155; font-size: 15px; line-height: 1.5;">Your one-time verification code for AICTE platform login is:</p>
+          <p style="color: #334155; font-size: 15px; line-height: 1.5;">Your one-time verification code for SeatSeal login is:</p>
           <div style="text-align: center; margin: 28px 0; background-color: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 16px;">
             <span style="font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #1e293b; font-family: 'Courier New', monospace;">${otp}</span>
           </div>
-          <p style="color: #64748b; font-size: 13px; line-height: 1.5;">This verification code will expire in <strong>${expiresMinutes} minutes</strong>. Do NOT share this code with anyone. AICTE officials will never ask for your verification code.</p>
+          <p style="color: #64748b; font-size: 13px; line-height: 1.5;">This verification code will expire in <strong>${expiresMinutes} minutes</strong>. Do NOT share this code with anyone. SeatSeal officials will never ask for your verification code.</p>
           <p style="color: #64748b; font-size: 12px; margin-top: 24px; padding-top: 16px; border-top: 1px solid #f1f5f9;">If you did not initiate this login attempt, someone may know your password. Change your password immediately.</p>
         </div>
       </body>
     </html>
   `;
 
-  const text = `Hello ${name || 'User'},\n\nYour AICTE APAAR Platform verification code is: ${otp}\n\nThis code expires in ${expiresMinutes} minutes. Never share this code with anyone.`;
+  const text = `Hello ${name || 'User'},\n\nYour SeatSeal verification code is: ${otp}\n\nThis code expires in ${expiresMinutes} minutes. Never share this code with anyone.`;
 
   return sendEmail({ to, subject, html, text });
 }

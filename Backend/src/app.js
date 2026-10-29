@@ -89,7 +89,7 @@ app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
     data: {
-      platform: 'SIH 2026 PS3 APAAR Seat Integrity Platform API',
+      platform: 'SeatSeal — Every Seat Is Seal API',
       status: 'ONLINE',
       version: '1.0.0',
       apiBase: '/api/v1',
